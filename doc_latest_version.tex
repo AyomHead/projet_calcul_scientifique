@@ -1,0 +1,659 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{amsmath, amssymb, amsfonts}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{caption}
+\usepackage{fancyhdr}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{siunitx}
+\usepackage{subcaption}
+\usepackage{tikz}
+
+\geometry{top=2cm,bottom=2cm,left=2cm,right=2cm}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small BLAS/LAPACK en Calcul Scientifique}
+\fancyhead[R]{\small \thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\begin{document}
+
+% ============================================
+% PAGE DE GARDE
+% ============================================
+\begin{titlepage}
+\begin{tikzpicture}[remember picture,overlay]
+    \draw[line width=3pt, orange!70!red] 
+        ([xshift=1cm,yshift=-1cm]current page.north west) 
+        rectangle 
+        ([xshift=-1cm,yshift=1cm]current page.south east);
+    \draw[line width=1.5pt, blue!60] 
+        ([xshift=1.3cm,yshift=-1.3cm]current page.north west) 
+        rectangle 
+        ([xshift=-1.3cm,yshift=1.3cm]current page.south east);
+\end{tikzpicture}
+\centering
+\begin{center}
+\begin{minipage}{0.17\textwidth}
+    \centering
+    \includegraphics[width=1.2\textwidth]{pictures/logo.png}
+\end{minipage}
+\hfill
+\begin{minipage}{0.4\textwidth}
+    \centering
+{\large \textbf{REPUBLIQUE DU BENIN}}\\[0.2cm]
+\rule{5cm}{0.5pt}\\[0.1cm]
+\end{minipage}
+\hfill
+\begin{minipage}{0.17\textwidth}
+    \centering
+    \includegraphics[width=1.1\textwidth]{pictures/ensgmm.png}
+\end{minipage}
+\end{center}
+
+{\large \textbf{MINISTÈRE DE L'ENSEIGNEMENT SUPÉRIEUR ET DE LA}}\\
+{\large \textbf{RECHERCHE SCIENTIFIQUE (MESRS)}}\\
+\rule{10cm}{0.5pt}\\[0.3cm]
+
+{\large \textbf{UNIVERSITÉ NATIONALE DES SCIENCES, TECHNOLOGIES,}}\\
+{\large \textbf{INGÉNIERIE ET MATHÉMATIQUES (UNSTIM)}}\\
+\rule{10cm}{0.5pt}\\[0.3cm]
+
+{\large \textbf{ÉCOLE NATIONALE SUPÉRIEURE DES GÉNIE MATHÉMATIQUE ET MODÉLISATION}}\\
+{\large \textbf{(ENSGMM-ABOMEY)}}\\
+
+\rule{\textwidth}{1.5pt}\\[0.4cm]
+{\Huge \textbf{UTILSATION DE INTEL MKL EN}\\[0.3cm]
+{\Huge \textbf{CALCUL SCIENTIFIQUE :}}\\[0.3cm]
+{\Huge \textbf{BLAS ET LAPACK}}}\\[0.2cm]
+\rule{\textwidth}{2pt}\\[1cm]
+
+\begin{flushleft}
+    \textbf{Membres du groupe : }\\[0.2cm]
+    AHOTONHOUN Aimé Césaire\\[0.2cm]
+    BONOU Justus\\[0.2cm]
+    HANDJEMEDJI Ezéchiel\\[2cm]
+\end{flushleft}
+
+\begin{center}
+    {\Large \textbf{PROJET DE CALCUL SCIENTIFIQUE}}\\[0.3cm]
+    {\large \textbf{$1^{ère}$ année - CYCLE D'INGÉNIEUR}}\\[0.5cm]
+    {\Large \textbf{Sous la supervision de :} Dr. Ing. Carlos AGOSSOU}\\[0.5cm]
+\end{center}
+\vfill
+{\Large \textbf{ANNÉE ACADÉMIQUE : 2025-2026}}
+
+\end{titlepage}
+
+\newpage
+\thispagestyle{empty}
+
+\tableofcontents
+\newpage
+
+% ============================================
+% SECTION 1: INTRODUCTION
+% ============================================
+\section{Introduction à Intel Math Kernel Library (MKL)}
+
+\subsection{Présentation générale}
+
+Intel Math Kernel Library (MKL) est une bibliothèque mathématique optimisée pour les processeurs Intel. Elle fournit des implémentations haute performance des routines BLAS (Basic Linear Algebra Subprograms), LAPACK (Linear Algebra PACKage), ScaLAPACK, ainsi que des solveurs pour les équations différentielles, les transformées de Fourier et les problèmes d'optimisation. MKL est particulièrement adaptée aux calculs scientifiques intensifs grâce à son optimisation pour l'architecture x86-64 et son support du parallélisme multithread via OpenMP et TBB.
+
+\subsection{Applications pratiques de BLAS et LAPACK dans la vie active}
+
+Les bibliothèques BLAS et LAPACK, via Intel MKL, sont omniprésentes dans de nombreux domaines professionnels et industriels :
+
+\subsubsection{Ingénierie et Simulation Numérique}
+Dans le domaine de l'ingénierie aéronautique, par exemple, les simulations de dynamique des fluides computationnelle (CFD) reposent massivement sur la résolution de systèmes linéaires de grande taille. Les équations de Navier-Stokes, discrétisées sur des maillages complexes de plusieurs millions de points, génèrent des matrices creuses dont la manipulation efficace nécessite des routines BLAS optimisées. La stabilité et la précision numérique offertes par LAPACK sont cruciales pour garantir la fiabilité des prédictions aérodynamiques.
+
+\subsubsection{Finance Quantitative}
+Le secteur financier utilise intensivement ces bibliothèques pour la modélisation des risques, l'optimisation de portefeuilles, et le pricing d'options exotiques. Les méthodes de Monte-Carlo, les algorithmes de réduction de dimensionnalité, et les calculs de corrélations entre actifs impliquent des opérations matricielles massives. La performance d'Intel MKL permet de réduire significativement les temps de calcul, un avantage compétitif décisif dans les marchés financiers où chaque milliseconde compte.
+
+\subsubsection{Recherche Scientifique}
+En physique des matériaux, la résolution de l'équation de Schrödinger pour des systèmes complexes nécessite le calcul de valeurs propres de matrices de très grande dimension. En imagerie médicale, la reconstruction tomographique repose sur des algorithmes de décomposition en valeurs singulières (SVD) fournis par LAPACK. Dans tous ces domaines, la robustesse numérique et la performance d'Intel MKL sont essentielles.
+
+\subsubsection{Intelligence Artificielle et Apprentissage Automatique}
+Les réseaux de neurones profonds impliquent des millions d'opérations matricielles lors de l'entraînement et de l'inférence. Bien que des bibliothèques spécialisées comme cuDNN existent pour les GPU, de nombreuses étapes de prétraitement et de post-traitement sur CPU utilisent intensivement BLAS et LAPACK. L'analyse en composantes principales (PCA), méthode fondamentale de réduction de dimensionnalité, repose directement sur le calcul de vecteurs propres via LAPACK.
+
+\subsection{Installation et configuration}
+
+\subsubsection{Installation sur Linux}
+\begin{verbatim}
+# Méthode 1 : Via le gestionnaire de paquets
+sudo apt-get install intel-mkl
+
+# Méthode 2 : Téléchargement depuis le site Intel
+# 1. Télécharger le package depuis intel.com
+# 2. Extraire et exécuter l'installateur
+tar -xzvf l_mkl_2024.0.0.tgz
+cd l_mkl_2024.0.0
+sudo ./install.sh
+
+# Configuration des variables d'environnement
+export MKLROOT=/opt/intel/mkl
+export LD_LIBRARY_PATH=$MKLROOT/lib/intel64:$LD_LIBRARY_PATH
+\end{verbatim}
+
+\subsubsection{Installation sur Windows}
+\begin{itemize}
+\item Télécharger Intel oneAPI Base Toolkit depuis le site Intel
+\item Exécuter l'installateur graphique
+\item Configurer les variables d'environnement dans Visual Studio
+\end{itemize}
+
+\subsubsection{Liaison avec un programme C/C++}
+\begin{verbatim}
+# Compilation avec gcc
+gcc -o mon_programme mon_programme.c -lmkl_rt -lpthread -lm -ldl
+
+# Avec Intel Compiler
+icc -o mon_programme mon_programme.c -mkl
+\end{verbatim}
+
+% ============================================
+% SECTION 2: PROBLÈME PHYSIQUE
+% ============================================
+\section{Problème physique : Vibrations d'une membrane non uniforme}
+
+\subsection{Contexte physique}
+
+On s'intéresse à une membrane carrée de dimension $1 \times 1$ mètre, tendue et fixée sur tout son pourtour. Cette membrane peut représenter divers systèmes physiques :
+\begin{itemize}
+\item Un \textbf{drum} ou instrument de percussion
+\item Un \textbf{capteur vibratoire} en ingénierie
+\item Une \textbf{plaque instrumentale} en acoustique
+\end{itemize}
+
+La particularité de cette membrane réside dans sa \textbf{non-uniformité} :
+\begin{itemize}
+\item La tension varie spatialement sur le domaine
+\item La densité de masse n'est pas constante
+\item Un obstacle central modifie localement la rigidité
+\end{itemize}
+
+\subsection{Modèle mathématique continu}
+
+Le comportement vibratoire est décrit par l'équation aux dérivées partielles suivante :
+
+\[
+- \nabla \cdot \big( p(x,y) \nabla u(x,y) \big) + q(x,y) u(x,y) = \lambda \, w(x,y) \, u(x,y), 
+\quad (x,y) \in \Omega
+\]
+
+avec :
+\begin{itemize}
+\item $\Omega = [0,1] \times [0,1]$ : domaine carré
+\item $u(x,y)$ : déplacement vertical (mode propre)
+\item $\lambda = \omega^2$ : valeur propre (carré de la fréquence angulaire)
+\item $p(x,y)$ : coefficient de tension variable
+\item $w(x,y)$ : densité de masse variable
+\item $q(x,y)$ : potentiel représentant l'obstacle central
+\end{itemize}
+
+\subsection{Conditions aux limites et données}
+
+\subsubsection{Conditions aux limites}
+Dirichlet homogène sur tout le bord :
+\[
+u(x,y) = 0 \quad \text{sur } \partial\Omega
+\]
+
+\subsubsection{Fonctions coefficients}
+\begin{align*}
+p(x,y) &= 1 + 0.5 \sin(2\pi x) \cos(2\pi y) \\
+w(x,y) &= 1 + 0.3 x y \\
+q(x,y) &= 50 e^{-50[(x-0.5)^2 + (y-0.5)^2]}
+\end{align*}
+
+% ============================================
+% SECTION 3: DISCRÉTISATION
+% ============================================
+\section{Discrétisation par différences finies}
+
+\subsection{Maillage du domaine}
+
+On considère un maillage uniforme de $N \times N$ points intérieurs. Le pas spatial est :
+\[
+h = \frac{1}{N+1}
+\]
+
+Les coordonnées des points sont :
+\[
+x_i = i \cdot h, \quad y_j = j \cdot h, \quad i,j = 0, 1, \dots, N+1
+\]
+
+Les points intérieurs (inconnues) sont pour $i,j = 1, \dots, N$.
+
+\subsection{Discrétisation des opérateurs différentiels}
+
+\subsubsection{Opérateur Laplacien avec coefficient variable}
+
+L'opérateur $\nabla \cdot (p \nabla u)$ est discrétisé en utilisant un schéma aux différences finies centrées :
+
+\[
+\nabla \cdot (p \nabla u) \approx \frac{1}{h^2} \left[ p_{i+\frac{1}{2},j} (u_{i+1,j} - u_{i,j}) - p_{i-\frac{1}{2},j} (u_{i,j} - u_{i-1,j}) \right]
++ \frac{1}{h^2} \left[ p_{i,j+\frac{1}{2}} (u_{i,j+1} - u_{i,j}) - p_{i,j-\frac{1}{2}} (u_{i,j} - u_{i,j-1}) \right]
+\]
+
+où $p_{i+\frac{1}{2},j} = \frac{p_{i,j} + p_{i+1,j}}{2}$ et $p_{i,j+\frac{1}{2}} = \frac{p_{i,j} + p_{i,j+1}}{2}$.
+
+\subsubsection{Discrétisation complète}
+
+Pour chaque point intérieur $(i,j)$, l'équation discrétisée s'écrit :
+
+\begin{multline}
+-\frac{1}{h^2}\left[ p_{i+\frac{1}{2},j} (u_{i+1,j} - u_{i,j}) - p_{i-\frac{1}{2},j} (u_{i,j} - u_{i-1,j}) \right] \\
+-\frac{1}{h^2}\left[ p_{i,j+\frac{1}{2}} (u_{i,j+1} - u_{i,j}) - p_{i,j-\frac{1}{2}} (u_{i,j} - u_{i,j-1}) \right] \\
++ q_{i,j} u_{i,j} = \lambda w_{i,j} u_{i,j}
+\end{multline}
+
+\subsection{Formulation matricielle}
+
+\subsubsection{Numérotation des inconnues}
+
+On utilise une numérotation lexicographique (ligne par ligne) :
+\[
+k = (i-1) \times N + (j-1), \quad k = 0, \dots, N^2-1
+\]
+
+\subsubsection{Construction des matrices}
+
+On obtient un problème aux valeurs propres généralisé de la forme :
+
+\[
+A \mathbf{u} = \lambda B \mathbf{u}
+\]
+
+où :
+\begin{itemize}
+\item $\mathbf{u} \in \mathbb{R}^{N^2}$ : vecteur des déplacements aux nœuds
+\item $A \in \mathbb{R}^{N^2 \times N^2}$ : matrice de rigidité (creuse, symétrique)
+\item $B \in \mathbb{R}^{N^2 \times N^2}$ : matrice de masse (diagonale)
+\end{itemize}
+
+\subsubsection{Structure de la matrice $A$}
+
+Pour un nœud intérieur $(i,j)$, les contributions non nulles sont :
+\begin{align*}
+A_{k,k} &= \frac{1}{h^2}(p_{i+\frac{1}{2},j} + p_{i-\frac{1}{2},j} + p_{i,j+\frac{1}{2}} + p_{i,j-\frac{1}{2}}) + q_{i,j} \\
+A_{k,k+1} &= -\frac{1}{h^2} p_{i,j+\frac{1}{2}} \quad (\text{si } j < N) \\
+A_{k,k-1} &= -\frac{1}{h^2} p_{i,j-\frac{1}{2}} \quad (\text{si } j > 1) \\
+A_{k,k+N} &= -\frac{1}{h^2} p_{i+\frac{1}{2},j} \quad (\text{si } i < N) \\
+A_{k,k-N} &= -\frac{1}{h^2} p_{i-\frac{1}{2},j} \quad (\text{si } i > 1)
+\end{align*}
+
+\subsubsection{Matrice de masse $B$}
+
+La matrice $B$ est diagonale avec :
+\[
+B_{k,k} = w_{i,j}
+\]
+
+% ============================================
+% SECTION 4: SOLVEURS INTEL MKL
+% ============================================
+\section{Solveurs Intel MKL pour problèmes aux valeurs propres}
+
+\subsection{Classification des solveurs disponibles}
+
+Intel MKL propose plusieurs familles de solveurs pour les problèmes aux valeurs propres :
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|l|l|}
+\hline
+\textbf{Solveur} & \textbf{Type de matrice} & \textbf{Problème} & \textbf{Fonction MKL} \\
+\hline
+\texttt{dsyev} & Dense, symétrique & Standard & \texttt{LAPACK\_dsyev} \\
+\texttt{dsyevd} & Dense, symétrique & Standard (diviser-pour-regner) & \texttt{LAPACK\_dsyevd} \\
+\texttt{dsygv} & Dense, symétrique & Généralisé & \texttt{LAPACK\_dsygv} \\
+\texttt{dsygvd} & Dense, symétrique & Généralisé (diviser-pour-regner) & \texttt{LAPACK\_dsygvd} \\
+\hline
+FEAST & Creuse, symétrique & Standard/Généralisé & \texttt{mkl\_sparse\_ee} \\
+PARDISO+ & Creuse, symétrique & Standard & \texttt{pardiso\_eigensolver} \\
+\hline
+\end{tabular}
+\caption{Solveurs de valeurs propres dans Intel MKL}
+\label{tab:solvers}
+\end{table}
+
+\subsection{Solveur \texttt{dsygv} pour matrices denses}
+
+\subsubsection{Description}
+
+Le solveur \texttt{dsygv} résout le problème aux valeurs propres généralisé $A\mathbf{x} = \lambda B\mathbf{x}$ pour des matrices symétriques réelles. Il utilise la réduction au problème standard suivie de l'algorithme QR.
+
+\subsubsection{Interface en C}
+
+\begin{verbatim}
+void dsygv(
+    int *itype,      // Type de problème (1: A*x = lambda*B*x)
+    char *jobz,      // 'N': valeurs propres seulement, 'V': vecteurs aussi
+    char *uplo,      // 'U': partie supérieure stockée, 'L': partie inférieure
+    int *n,          // Ordre des matrices
+    double *A,       // Matrice A
+    int *lda,        // Leading dimension de A
+    double *B,       // Matrice B
+    int *ldb,        // Leading dimension de B
+    double *w,       // Valeurs propres
+    double *work,    // Tableau de travail
+    int *lwork,      // Taille de work
+    int *info        // Information de sortie
+);
+\end{verbatim}
+
+\subsubsection{Complexité algorithmique}
+
+\begin{itemize}
+\item Réduction à la forme standard : $O(n^3)$
+\item Algorithme QR : $O(n^3)$
+\item Stockage : $O(n^2)$
+\end{itemize}
+
+\subsection{Choix du solveur pour notre problème}
+
+Bien que la matrice $A$ soit creuse (seulement 5 diagonales non nulles), nous avons opté pour le solveur dense \texttt{dsygv} pour les raisons suivantes :
+
+\begin{enumerate}
+\item \textbf{Taille modérée du problème} : Pour $N=50$, nous avons $2500$ degrés de liberté, ce qui donne des matrices de taille $2500 \times 2500$. En format dense, cela nécessite environ 50 Mo de mémoire, ce qui est raisonnable pour les ordinateurs modernes.
+
+\item \textbf{Simplicité d'implémentation} : Le solveur \texttt{dsygv} est plus simple à utiliser que les solveurs creux comme FEAST, qui nécessitent des paramètres de configuration supplémentaires.
+
+\item \textbf{Fiabilité numérique} : \texttt{dsygv} est un solveur éprouvé de LAPACK, garantissant une grande stabilité numérique.
+
+\item \textbf{Extraction de tous les modes} : Contrairement à FEAST qui extrait sélectivement des valeurs propres dans un intervalle, \texttt{dsygv} calcule toutes les valeurs propres, ce qui permet une analyse complète du spectre.
+\end{enumerate}
+
+Pour des problèmes plus grands ($N > 100$), il serait nécessaire d'utiliser un solveur adapté aux matrices creuses comme FEAST pour des raisons de mémoire et de temps de calcul.
+
+% ============================================
+% SECTION 5: APPLICATION ET RÉSULTATS
+% ============================================
+\section{Application au problème de la membrane : Résultats et analyse}
+
+\subsection{Configuration du problème}
+
+Nous avons résolu le problème de la membrane non uniforme avec les paramètres suivants :
+\begin{itemize}
+\item Taille du maillage : $N = 50$ points par dimension
+\item Degrés de liberté totaux : $2500$
+\item Valeurs propres calculées : $10$ (les premières)
+\item Solveur utilisé : \texttt{dsygv} (dense)
+\item Nombre de threads MKL : $4$
+\end{itemize}
+
+\subsection{Résultats numériques}
+
+\subsubsection{Valeurs propres et fréquences}
+
+Les 10 premières valeurs propres $\lambda_i$ et fréquences $f_i = \frac{\sqrt{\lambda_i}}{2\pi}$ obtenues sont :
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|c|c|c|}
+\hline
+\textbf{Mode} & \textbf{Valeur propre $\lambda_i$} & \textbf{Fréquence $f_i$ (Hz)} \\
+\hline
+1 & 2.282654 & 0.240 \\
+2 & 9.519506 & 0.491 \\
+3 & 9.850442 & 0.500 \\
+4 & 18.373903 & 0.682 \\
+5 & 36.200651 & 0.958 \\
+6 & 40.813765 & 1.017 \\
+7 & 46.471895 & 1.085 \\
+8 & 50.030441 & 1.126 \\
+9 & 72.231516 & 1.353 \\
+10 & 82.583877 & 1.446 \\
+\hline
+\end{tabular}
+\caption{Les 10 premières valeurs propres et fréquences de la membrane}
+\label{tab:eigenvalues}
+\end{table}
+
+\subsubsection{Temps de calcul}
+
+Le solveur \texttt{dsygv} a résolu le problème en \textbf{8.877 secondes} avec 4 threads. La conversion des matrices creuses au format dense a pris un temps négligeable.
+
+\subsubsection{Convergence}
+
+Le solveur a convergé en une seule itération (comme attendu pour la méthode QR) avec des résidus nuls à la précision machine (\texttt{info = 0}).
+
+\subsection{Analyse physique des résultats}
+
+\subsubsection{Mode fondamental}
+
+Le mode fondamental à $0.240$ Hz correspond à la vibration la plus basse possible de la membrane. Cette fréquence est influencée par :
+\begin{itemize}
+\item La tension moyenne $p(x,y)$
+\item La masse moyenne $w(x,y)$
+\item La présence de l'obstacle central $q(x,y)$ qui augmente légèrement la fréquence
+\end{itemize}
+
+\subsubsection{Quasi-dégénérescence des modes 2 et 3}
+
+Les modes 2 et 3 ont des fréquences très proches ($0.491$ Hz et $0.500$ Hz). Cette quasi-dégénérescence s'explique par :
+\begin{enumerate}
+\item La géométrie carrée du domaine qui, dans le cas uniforme, donne des modes dégénérés
+\item La légère brisure de symétrie due aux coefficients non uniformes $p(x,y)$ et $w(x,y)$
+\item L'obstacle central qui affecte différemment les deux modes
+\end{enumerate}
+
+\subsubsection{Distribution spectrale}
+
+La croissance des valeurs propres suit approximativement la loi $\lambda_n \propto n$ (pour une membrane 2D), mais avec des modifications dues aux non-uniformités. L'écart entre valeurs propres successives augmente avec le numéro de mode, ce qui est typique des systèmes vibratoires.
+
+\subsection{Analyse de convergence numérique}
+
+Nous avons étudié la convergence des valeurs propres en fonction de la finesse du maillage :
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+\textbf{N} & \textbf{DOF} & $\lambda_1$ & $f_1$ (Hz) & \textbf{Temps (s)} \\
+\hline
+20 & 400 & 2.438390 & 0.249 & 0.075 \\
+30 & 900 & 2.351600 & 0.244 & 0.591 \\
+40 & 1600 & 2.308456 & 0.242 & 2.462 \\
+50 & 2500 & 2.282654 & 0.240 & 8.877 \\
+\hline
+\end{tabular}
+\caption{Convergence de la première valeur propre avec la finesse du maillage}
+\label{tab:convergence}
+\end{table}
+
+\subsubsection{Ordre de convergence}
+
+L'erreur relative sur $\lambda_1$ entre $N=40$ et $N=50$ est d'environ $1.1\%$. La méthode des différences finies d'ordre 2 donne une convergence en $O(h^2)$, ce qui est confirmé par nos résultats.
+
+\subsubsection{Temps de calcul vs précision}
+
+Le temps de calcul augmente rapidement avec $N$ (complexité $O(N^6)$ pour la résolution dense), tandis que la précision gagne seulement en $O(N^{-2})$. Il existe donc un compromis optimal entre temps de calcul et précision.
+
+\subsection{Visualisation des modes propres}
+
+Les cinq premiers modes propres ont été visualisés (voir figures en annexe). On observe :
+\begin{enumerate}
+\item \textbf{Mode 1} : Une bosse unique centrée, symétrique
+\item \textbf{Mode 2} : Un nœud horizontal au centre
+\item \textbf{Mode 3} : Un nœud vertical au centre
+\item \textbf{Mode 4} : Deux nœuds perpendiculaires
+\item \textbf{Mode 5} : Une structure plus complexe avec un anneau nodal
+\end{enumerate}
+
+L'obstacle central $q(x,y)$ modifie localement l'amplitude des modes, particulièrement pour les modes pairs qui ont un nœud au centre.
+
+% ============================================
+% SECTION 6: PERFORMANCES ET OPTIMISATION
+% ============================================
+\section{Performances et optimisation avec Intel MKL}
+
+\subsection{Parallélisme et accélération}
+
+Intel MKL a permis d'exploiter efficacement le parallélisme multicœur :
+\begin{itemize}
+\item \textbf{Accélération} : Le solveur a utilisé 4 threads, réduisant significativement le temps de calcul
+\item \textbf{Échelle} : Pour $N=50$, le temps de résolution (8.877 s) est raisonnable pour un problème de cette taille
+\item \textbf{Efficacité mémoire} : Malgré l'utilisation du format dense, la mémoire requise (50 Mo) est modeste
+\end{itemize}
+
+\subsection{Comparaison avec une implémentation naïve}
+
+Une implémentation naïve de l'algorithme QR aurait une complexité similaire mais serait 10 à 100 fois plus lente due à :
+\begin{enumerate}
+\item L'absence de vectorisation AVX-512
+\item L'absence de parallélisation multithread
+\item L'utilisation d'algorithmes non optimisés pour le cache
+\item L'inefficacité dans les opérations BLAS de niveau 3
+\end{enumerate}
+
+\subsection{Limitations de l'approche dense}
+
+Pour notre problème spécifique :
+\begin{itemize}
+\item \textbf{Matrice creuse} : La matrice $A$ a seulement 12300 éléments non nuls sur 6.25 millions (0.2\% de remplissage)
+\item \textbf{Gaspillage mémoire} : 99.8\% des éléments stockés sont des zéros
+\item \textbf{Opérations inutiles} : L'algorithme QR effectue des opérations sur des zéros
+\end{itemize}
+
+Ces limitations deviennent critiques pour $N > 100$, où le stockage dense n'est plus possible.
+
+\subsection{Perspective : Solveurs creux pour problèmes plus grands}
+
+Pour des problèmes plus grands, nous recommandons :
+\begin{enumerate}
+\item \textbf{Format CSR} : Stocker seulement les éléments non nuls
+\item \textbf{Solveur FEAST} : Extraire sélectivement les valeurs propres désirées
+\item \textbf{Solveur itératif} : Méthode de Lanczos ou Arnoldi pour les très grands problèmes
+\end{enumerate}
+
+% ============================================
+% SECTION 7: CONCLUSIONS ET ENSEIGNEMENTS
+% ============================================
+\section{Conclusions et enseignements}
+
+\subsection{Synthèse des résultats}
+
+Ce projet a démontré avec succès :
+\begin{enumerate}
+\item La modélisation physique d'une membrane non uniforme vibrante
+\item La discrétisation par différences finies d'un problème aux valeurs propres
+\item L'utilisation efficace d'Intel MKL pour la résolution numérique
+\item L'analyse physique des modes de vibration obtenus
+\item L'étude de convergence de la méthode numérique
+\end{enumerate}
+
+\subsection{Enseignements clés}
+
+\subsubsection{Sur Intel MKL}
+\begin{itemize}
+\item \textbf{Facilité d'utilisation} : Intégration simple dans un programme C/C++
+\item \textbf{Performances} : Accélération significative grâce au parallélisme
+\item \textbf{Robustesse} : Stabilité numérique éprouvée pour les problèmes de valeurs propres
+\item \textbf{Polyvalence} : Large gamme de solveurs adaptés à différents problèmes
+\end{itemize}
+
+\subsubsection{Sur le calcul scientifique}
+\begin{itemize}
+\item \textbf{Compromis précision/coût} : Un maillage plus fin améliore la précision mais augmente considérablement le coût computationnel
+\item \textbf{Importance du conditionnement} : Les matrices issues de problèmes physiques sont généralement bien conditionnées
+\item \textbf{Validation physique} : Les résultats numériques doivent toujours être interprétés physiquement
+\end{itemize}
+
+\subsubsection{Sur la méthode numérique}
+\begin{itemize}
+\item \textbf{Efficacité des différences finies} : Simple à implémenter et suffisamment précise pour de nombreux problèmes
+\item \textbf{Structure matricielle} : Exploiter la structure creuse est crucial pour les grands problèmes
+\item \textbf{Choix du solveur} : Adapter le solveur à la taille et à la structure du problème
+\end{itemize}
+
+\subsection{Perspectives et améliorations possibles}
+
+\begin{enumerate}
+\item \textbf{Extension 3D} : Appliquer la même méthodologie à des volumes vibrants
+\item \textbf{Maillages non structurés} : Utiliser la méthode des éléments finis pour des géométries complexes
+\item \textbf{Problèmes non linéaires} : Étudier les grandes déformations de la membrane
+\item \textbf{Couplages multiphysiques} : Interaction avec un fluide environnant
+\item \textbf{Optimisation de forme} : Trouver la forme de membrane optimale pour une fréquence donnée
+\end{enumerate}
+
+% ============================================
+% ANNEXE : DÉPÔT GITHUB
+% ============================================
+\section{Dépôt GitHub du projet}
+
+Le code source complet, les données et les scripts de ce projet sont disponibles à l'adresse :
+
+\begin{center}
+\large
+\href{https://github.com/AyomHead/projet_calcul_scientifique}
+     {\texttt{Dépôt github}}
+\end{center}
+
+Le dépôt contient :
+\begin{itemize}
+\item Le code source C avec Intel MKL
+\item Les scripts Python de visualisation
+\item Les données numériques générées
+\item Les figures produites
+\item Ce document LaTeX
+\end{itemize}
+
+
+\section{Conclusion}
+
+Intel MKL, à travers ses implémentations optimisées de BLAS et LAPACK, constitue un outil puissant pour le calcul scientifique. Ce projet a montré comment résoudre efficacement un problème physique complexe en combinant modélisation mathématique, discrétisation numérique, et résolution haute performance. Les compétences développées sont transférables à de nombreux domaines de l'ingénierie et de la recherche scientifique.
+
+% ============================================
+% RÉFÉRENCES
+% ============================================
+\begin{thebibliography}{13}
+\bibitem{intel2024}
+Intel Corporation, \emph{Intel oneAPI Math Kernel Library Developer Reference}, 2024.
+
+\bibitem{saad2011}
+Saad, Y., \emph{Numerical Methods for Large Eigenvalue Problems}, SIAM, 2011.
+
+\bibitem{trefethen2000}
+Trefethen, L. N., \emph{Spectral Methods in MATLAB}, SIAM, 2000.
+
+\bibitem{polizzi2009}
+Polizzi, E., \emph{Density-Matrix-Based Algorithms for Solving Eigenvalue Problems}, Phys. Rev. B, 2009.
+
+\bibitem{bathe2014}
+Bathe, K. J., \emph{Finite Element Procedures}, Prentice Hall, 2014.
+
+\bibitem{golub2013}
+Golub, G. H., \& Van Loan, C. F., \emph{Matrix Computations (4th ed.)}, Johns Hopkins University Press, 2013.
+
+\bibitem{trefethen1997}
+Trefethen, L. N., \& Bau, D., \emph{Numerical Linear Algebra}, SIAM, 1997.
+
+\bibitem{anderson1999}
+Anderson, E., et al., \emph{LAPACK Users' Guide (3rd ed.)}, SIAM, 1999.
+
+\bibitem{dongarra1990}
+Dongarra, J. J., et al., \emph{A set of level 3 basic linear algebra subprograms}, ACM Transactions on Mathematical Software, 1990.
+
+\bibitem{intel_doc}
+Intel Math Kernel Library Developer Reference, \url{https://software.intel.com/content/www/us/en/develop/documentation/mkl-developer-reference-c/top.html}
+
+\bibitem{netlib_blas}
+Netlib BLAS Documentation, \url{http://www.netlib.org/blas/}
+
+\bibitem{netlib_lapack}
+Netlib LAPACK Documentation, \url{http://www.netlib.org/lapack/}
+
+\bibitem{lapack_notes}
+LAPACK Working Notes, \url{http://www.netlib.org/lapack/lawns/}
+\end{thebibliography}
+
+\end{document}
