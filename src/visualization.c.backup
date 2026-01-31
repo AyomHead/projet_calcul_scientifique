@@ -1,0 +1,346 @@
+#include "visualization.h"
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+
+// Définitions pour PI si non défini
+#ifndef PI
+#define PI 3.14159265358979323846
+#endif
+
+void save_mode_to_csv(Mesh* mesh, double* mode, int mode_index, 
+                     const char* filename) {
+    FILE* file = fopen(filename, "w");
+    if (!file) {
+        fprintf(stderr, "Error: Cannot open file %s for writing\n", filename);
+        return;
+    }
+    
+    fprintf(file, "x,y,mode_value\n");
+    for (int i = 0; i < mesh->N; i++) {
+        for (int j = 0; j < mesh->N; j++) {
+            int idx = i * mesh->N + j;
+            fprintf(file, "%.6f,%.6f,%.6f\n",
+                   mesh->x[i], mesh->y[j], mode[idx]);
+        }
+    }
+    
+    fclose(file);
+    printf("Saved mode %d data to %s\n", mode_index + 1, filename);
+}
+
+void generate_python_script(const char* plot_type) {
+    char script_filename[256];
+    sprintf(script_filename, "scripts/plot_%s.py", plot_type);
+    
+    // Créer le répertoire scripts s'il n'existe pas
+    char mkdir_cmd[256];
+    sprintf(mkdir_cmd, "mkdir -p scripts");
+    int ret5 = system(mkdir_cmd); (void)ret5;;
+    
+    FILE* script = fopen(script_filename, "w");
+    if (!script) {
+        fprintf(stderr, "Error: Cannot create Python script %s\n", script_filename);
+        return;
+    }
+    
+    if (strcmp(plot_type, "modes") == 0) {
+        fprintf(script, "# Python script for plotting membrane modes\n");
+        fprintf(script, "import numpy as np\n");
+        fprintf(script, "import matplotlib.pyplot as plt\n");
+        fprintf(script, "import os\n");
+        fprintf(script, "from mpl_toolkits.mplot3d import Axes3D\n\n");
+        
+        fprintf(script, "# Read data\n");
+        fprintf(script, "def read_mode_data(filename):\n");
+        fprintf(script, "    try:\n");
+        fprintf(script, "        data = np.loadtxt(filename, delimiter=',')\n");
+        fprintf(script, "        return data\n");
+        fprintf(script, "    except Exception as e:\n");
+        fprintf(script, "        print(f'Error reading {filename}: {e}')\n");
+        fprintf(script, "        return None\n\n");
+        
+        fprintf(script, "# Plot function\n");
+        fprintf(script, "def plot_mode(data, mode_num):\n");
+        fprintf(script, "    if data is None:\n");
+        fprintf(script, "        print(f'Skipping mode {mode_num}: No data')\n");
+        fprintf(script, "        return\n");
+        fprintf(script, "    \n");
+        fprintf(script, "    fig = plt.figure(figsize=(10, 8))\n");
+        fprintf(script, "    ax = fig.add_subplot(111, projection='3d')\n");
+        fprintf(script, "    \n");
+        fprintf(script, "    x = data[:, 0]\n");
+        fprintf(script, "    y = data[:, 1]\n");
+        fprintf(script, "    z = data[:, 2]\n");
+        fprintf(script, "    \n");
+        fprintf(script, "    # Reshape pour la grille\n");
+        fprintf(script, "    n = int(np.sqrt(len(x)))\n");
+        fprintf(script, "    X = x.reshape((n, n))\n");
+        fprintf(script, "    Y = y.reshape((n, n))\n");
+        fprintf(script, "    Z = z.reshape((n, n))\n");
+        fprintf(script, "    \n");
+        fprintf(script, "    surf = ax.plot_surface(X, Y, Z, cmap='viridis',\n");
+        fprintf(script, "                           linewidth=0, antialiased=True)\n");
+        fprintf(script, "    fig.colorbar(surf, ax=ax, shrink=0.5, aspect=5)\n");
+        fprintf(script, "    ax.set_title(f'Membrane Mode {mode_num}')\n");
+        fprintf(script, "    ax.set_xlabel('X coordinate')\n");
+        fprintf(script, "    ax.set_ylabel('Y coordinate')\n");
+        fprintf(script, "    ax.set_zlabel('Amplitude')\n");
+        fprintf(script, "    \n");
+        fprintf(script, "    # Créer le répertoire plots s'il n'existe pas\n");
+        fprintf(script, "    os.makedirs('plots', exist_ok=True)\n");
+        fprintf(script, "    \n");
+        fprintf(script, "    plt.savefig(f'plots/mode_{mode_num:02d}.png', dpi=300, bbox_inches='tight')\n");
+        fprintf(script, "    print(f'Generated plot for mode {mode_num}')\n");
+        fprintf(script, "    plt.close()\n\n");
+        
+        fprintf(script, "# Main execution\n");
+        fprintf(script, "if __name__ == '__main__':\n");
+        fprintf(script, "    print('Generating membrane mode plots...')\n");
+        fprintf(script, "    \n");
+        fprintf(script, "    # Créer le répertoire data s'il n'existe pas\n");
+        fprintf(script, "    os.makedirs('data', exist_ok=True)\n");
+        fprintf(script, "    \n");
+        fprintf(script, "    # Par défaut, on génère les 5 premiers modes\n");
+        fprintf(script, "    for i in range(1, 6):\n");
+        fprintf(script, "        filename = f'data/mode_{i:02d}.csv'\n");
+        fprintf(script, "        if os.path.exists(filename):\n");
+        fprintf(script, "            data = read_mode_data(filename)\n");
+        fprintf(script, "            plot_mode(data, i)\n");
+        fprintf(script, "        else:\n");
+        fprintf(script, "            print(f'File {filename} not found, skipping mode {i}')\n");
+        fprintf(script, "    print('Plot generation complete!')\n");
+    }
+    
+    fclose(script);
+    printf("Generated Python script: %s\n", script_filename);
+}
+
+void generate_plots(Mesh* mesh, EigenResults* results, const char* output_dir) {
+    printf("Generating plots in directory: %s\n", output_dir);
+    
+    // Créer les répertoires nécessaires
+    char command[512];
+    sprintf(command, "mkdir -p %s", output_dir);
+    int ret6 = system(command); (void)ret6;;
+    int ret7 = system("mkdir -p scripts"); (void)ret7;;
+    int ret8 = system("mkdir -p data"); (void)ret8;;
+    
+    // Générer le script Python pour les plots
+    generate_python_script("modes");
+    
+    // Vérifier que le script a été créé
+    FILE* test_script = fopen("scripts/plot_modes.py", "r");
+    if (!test_script) {
+        fprintf(stderr, "Error: Python script not created\n");
+        return;
+    }
+    fclose(test_script);
+    
+    // Exécuter le script Python
+    printf("Executing Python script...\n");
+    int ret = system("python scripts/plot_modes.py");
+    if (ret != 0) {
+        fprintf(stderr, "Warning: Python script execution returned code %d\n", ret);
+    } else {
+        printf("Python script executed successfully\n");
+    }
+    
+    // Sauvegarder les valeurs propres
+    char eig_filename[256];
+    sprintf(eig_filename, "%s/eigenvalues.csv", output_dir);
+    
+    FILE* eig_file = fopen(eig_filename, "w");
+    if (eig_file) {
+        fprintf(eig_file, "mode,frequency_hz,eigenvalue,residual\n");
+        for (int i = 0; i < results->n_eigenvalues; i++) {
+            double freq = sqrt(results->eigenvalues[i]) / (2 * PI);
+            fprintf(eig_file, "%d,%.6f,%.10e,%.10e\n",
+                   i + 1, freq, results->eigenvalues[i], results->residuals[i]);
+        }
+        fclose(eig_file);
+        printf("Saved eigenvalues to %s\n", eig_filename);
+    } else {
+        fprintf(stderr, "Error: Cannot save eigenvalues to %s\n", eig_filename);
+    }
+}
+
+void plot_convergence(int* grid_sizes, double** eigenvalues, 
+                     int n_sizes, int n_eigenvalues,
+                     const char* filename) {
+    printf("Generating convergence plot...\n");
+    
+    // Créer le répertoire data s'il n'existe pas
+    int ret9 = system("mkdir -p data"); (void)ret9;;
+    
+    FILE* conv_file = fopen("data/convergence_data.csv", "w");
+    if (!conv_file) {
+        fprintf(stderr, "Error: Cannot create convergence data file\n");
+        return;
+    }
+    
+    fprintf(conv_file, "grid_size");
+    for (int m = 0; m < n_eigenvalues; m++) {
+        fprintf(conv_file, ",mode_%d", m + 1);
+    }
+    fprintf(conv_file, "\n");
+    
+    for (int s = 0; s < n_sizes; s++) {
+        fprintf(conv_file, "%d", grid_sizes[s]);
+        for (int m = 0; m < n_eigenvalues; m++) {
+            fprintf(conv_file, ",%.10e", eigenvalues[s][m]);
+        }
+        fprintf(conv_file, "\n");
+    }
+    
+    fclose(conv_file);
+    printf("Saved convergence data to data/convergence_data.csv\n");
+    
+    // Créer le répertoire scripts s'il n'existe pas
+    int ret10 = system("mkdir -p scripts"); (void)ret10;;
+    
+    // Générer un script Python pour le plot de convergence
+    FILE* script = fopen("scripts/plot_convergence.py", "w");
+    if (!script) {
+        fprintf(stderr, "Error: Cannot create convergence plot script\n");
+        return;
+    }
+    
+    fprintf(script, "import numpy as np\n");
+    fprintf(script, "import matplotlib.pyplot as plt\n");
+    fprintf(script, "import os\n\n");
+    
+    fprintf(script, "print('Generating convergence plot...')\n");
+    fprintf(script, "\n");
+    fprintf(script, "try:\n");
+    fprintf(script, "    data = np.loadtxt('data/convergence_data.csv', delimiter=',', skiprows=1)\n");
+    fprintf(script, "    grid_sizes = data[:, 0]\n");
+    fprintf(script, "    \n");
+    fprintf(script, "    # Créer le répertoire plots s'il n'existe pas\n");
+    fprintf(script, "    os.makedirs('plots', exist_ok=True)\n");
+    fprintf(script, "    \n");
+    fprintf(script, "    fig, axes = plt.subplots(1, %d, figsize=(15, 5))\n", n_eigenvalues);
+    fprintf(script, "    \n");
+    
+    for (int m = 0; m < n_eigenvalues; m++) {
+        fprintf(script, "    axes[%d].plot(grid_sizes, data[:, %d], 'o-', linewidth=2, markersize=6)\n", m, m + 1);
+        fprintf(script, "    axes[%d].set_title('Mode %d Eigenvalue Convergence')\n", m, m + 1);
+        fprintf(script, "    axes[%d].set_xlabel('Grid Size N')\n", m);
+        fprintf(script, "    axes[%d].set_ylabel('Eigenvalue')\n", m);
+        fprintf(script, "    axes[%d].grid(True, alpha=0.3)\n", m);
+        fprintf(script, "    axes[%d].set_xscale('log')\n", m);
+        fprintf(script, "    axes[%d].set_yscale('log')\n", m);
+    }
+    
+    fprintf(script, "    \n");
+    fprintf(script, "    plt.tight_layout()\n");
+    fprintf(script, "    plt.savefig('%s', dpi=300, bbox_inches='tight')\n", filename);
+    fprintf(script, "    plt.close()\n");
+    fprintf(script, "    print(f'Convergence plot saved to {filename}')\n");
+    fprintf(script, "    \n");
+    fprintf(script, "except Exception as e:\n");
+    fprintf(script, "    print(f'Error generating convergence plot: {e}')\n");
+    
+    fclose(script);
+    
+    // Exécuter le script
+    printf("Executing convergence plot script...\n");
+    int ret = system("python scripts/plot_convergence.py");
+    if (ret != 0) {
+        fprintf(stderr, "Warning: Convergence plot script returned code %d\n", ret);
+    }
+}
+
+void plot_matrix_sparsity(SparseMatrixCSR* mat, const char* filename) {
+    printf("Generating matrix sparsity plot...\n");
+    
+    // Créer le répertoire data s'il n'existe pas
+    int ret11 = system("mkdir -p data"); (void)ret11;;
+    
+    FILE* data_file = fopen("data/matrix_pattern.csv", "w");
+    if (!data_file) {
+        fprintf(stderr, "Error: Cannot create matrix pattern file\n");
+        return;
+    }
+    
+    fprintf(data_file, "row,col\n");
+    for (MKL_INT i = 0; i < mat->n_rows; i++) {
+        for (MKL_INT j = mat->row_index[i]; j < mat->row_index[i + 1]; j++) {
+            fprintf(data_file, "%d,%d\n", (int)i, (int)mat->columns[j]);
+        }
+    }
+    
+    fclose(data_file);
+    printf("Saved matrix pattern to data/matrix_pattern.csv\n");
+    
+    // Créer le répertoire scripts s'il n'existe pas
+    int ret12 = system("mkdir -p scripts"); (void)ret12;;
+    
+    // Script Python pour visualiser la structure
+    FILE* script = fopen("scripts/plot_sparsity.py", "w");
+    if (!script) {
+        fprintf(stderr, "Error: Cannot create sparsity plot script\n");
+        return;
+    }
+    
+    fprintf(script, "import numpy as np\n");
+    fprintf(script, "import matplotlib.pyplot as plt\n");
+    fprintf(script, "import os\n\n");
+    
+    fprintf(script, "print('Generating matrix sparsity plot...')\n");
+    fprintf(script, "\n");
+    fprintf(script, "try:\n");
+    fprintf(script, "    data = np.loadtxt('data/matrix_pattern.csv', delimiter=',', skiprows=1)\n");
+    fprintf(script, "    rows = data[:, 0].astype(int)\n");
+    fprintf(script, "    cols = data[:, 1].astype(int)\n");
+    fprintf(script, "    \n");
+    fprintf(script, "    # Créer le répertoire plots s'il n'existe pas\n");
+    fprintf(script, "    os.makedirs('plots', exist_ok=True)\n");
+    fprintf(script, "    \n");
+    fprintf(script, "    plt.figure(figsize=(10, 10))\n");
+    fprintf(script, "    \n");
+    fprintf(script, "    # Tracer les points non nuls\n");
+    fprintf(script, "    plt.scatter(cols, rows, s=0.5, c='blue', alpha=0.6, marker='s')\n");
+    fprintf(script, "    \n");
+    fprintf(script, "    plt.title('Matrix Sparsity Pattern', fontsize=14)\n");
+    fprintf(script, "    plt.xlabel('Column Index', fontsize=12)\n");
+    fprintf(script, "    plt.ylabel('Row Index', fontsize=12)\n");
+    fprintf(script, "    plt.gca().invert_yaxis()\n");
+    fprintf(script, "    plt.grid(True, alpha=0.2)\n");
+    fprintf(script, "    plt.axis('equal')\n");
+    fprintf(script, "    \n");
+    fprintf(script, "    # Ajouter des informations sur la matrice\n");
+    fprintf(script, "    n_rows = %d\n", (int)mat->n_rows);
+    fprintf(script, "    n_cols = %d\n", (int)mat->n_cols);
+    fprintf(script, "    nnz = len(rows)\n");
+    fprintf(script, "    sparsity = (1.0 - nnz/(n_rows*n_cols)) * 100\n");
+    fprintf(script, "    \n");
+    fprintf(script, "    info_text = f'Dimensions: {n_rows} x {n_cols}\\nNon-zeros: {nnz}\\nSparsity: {sparsity:.2f}%%'\n");
+    fprintf(script, "    plt.figtext(0.02, 0.98, info_text, fontsize=10,\n");
+    fprintf(script, "                verticalalignment='top',\n");
+    fprintf(script, "                bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))\n");
+    fprintf(script, "    \n");
+    fprintf(script, "    plt.tight_layout()\n");
+    fprintf(script, "    plt.savefig('%s', dpi=300, bbox_inches='tight')\n", filename);
+    fprintf(script, "    plt.close()\n");
+    fprintf(script, "    print(f'Sparsity plot saved to {filename}')\n");
+    fprintf(script, "    \n");
+    fprintf(script, "except Exception as e:\n");
+    fprintf(script, "    print(f'Error generating sparsity plot: {e}')\n");
+    
+    fclose(script);
+    
+    // Exécuter le script
+    printf("Executing sparsity plot script...\n");
+    int ret = system("python scripts/plot_sparsity.py");
+    if (ret != 0) {
+        fprintf(stderr, "Warning: Sparsity plot script returned code %d\n", ret);
+    }
+}
+
+void create_animation(Mesh* mesh, EigenResults* results, 
+                     int n_modes, const char* output_dir) {
+    printf("Animation generation not yet implemented\n");
+    // TODO: Implémenter la génération d'animation
+}

@@ -1,0 +1,186 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <math.h>
+#include <string.h>
+#include "membrane.h"
+#include "mesh.h"
+#include "matrix_builder.h"
+#include "solver.h"
+#include "visualization.h"
+
+// Définitions pour PI si non défini
+#ifndef PI
+#define PI 3.14159265358979323846
+#endif
+
+int main(int argc, char *argv[]) {
+    printf("========================================\n");
+    printf("  Membrane Vibration Solver\n");
+    printf("  Using Intel MKL (DSYGV Dense Solver)\n");
+    printf("========================================\n\n");
+    
+    clock_t total_start = clock();
+    
+    // ============ CONFIGURATION ============
+    int N = 50;                     // Points par dimension (50x50 = 2500 DOF)
+    int n_eigenvalues = 10;        // Nombre de modes à calculer
+    
+    // Arguments en ligne de commande
+    if (argc > 1) N = atoi(argv[1]);
+    if (argc > 2) n_eigenvalues = atoi(argv[2]);
+    
+    // Validation des paramètres
+    if (N < 10) {
+        fprintf(stderr, "Error: Grid size N must be at least 10\n");
+        return 1;
+    }
+    if (n_eigenvalues < 1) {
+        fprintf(stderr, "Error: Must compute at least 1 eigenvalue\n");
+        return 1;
+    }
+    
+    int total_dof = N * N;
+    if (n_eigenvalues > total_dof) {
+        printf("Warning: Requested %d eigenvalues but only %d DOF. Using %d instead.\n",
+               n_eigenvalues, total_dof, total_dof);
+        n_eigenvalues = total_dof;
+    }
+    
+    printf("Configuration:\n");
+    printf("  Grid size: %d x %d\n", N, N);
+    printf("  Total DOF: %d\n", total_dof);
+    printf("  Eigenvalues to compute: %d\n\n", n_eigenvalues);
+    
+    // ============ INITIALISATION MKL ============
+    int mkl_threads = 4;
+    mkl_set_num_threads(mkl_threads);
+    printf("MKL configured with %d threads\n\n", mkl_threads);
+    
+    // ============ CREATION DU PROBLEME ============
+    printf("Creating membrane problem...\n");
+    MembraneParams* params = create_default_params();
+    if (!params) {
+        fprintf(stderr, "Error: Failed to create membrane parameters\n");
+        return 1;
+    }
+    
+    Mesh* mesh = create_mesh(N, params);
+    if (!mesh) {
+        fprintf(stderr, "Error: Failed to create mesh\n");
+        free_membrane_params(params);
+        return 1;
+    }
+    
+    printf("Mesh created with h = %.6f\n", mesh->h);
+    printf("Saving mesh data...\n");
+    
+    // Créer le répertoire data s'il n'existe pas
+    int ret1 = system("mkdir -p data"); (void)ret1;
+    
+    save_mesh(mesh, "data/mesh_data.csv");
+    
+    // ============ CONSTRUCTION DES MATRICES ============
+    printf("\nBuilding stiffness matrix A...\n");
+    SparseMatrixCSR* A = build_stiffness_matrix(mesh);
+    if (!A) {
+        fprintf(stderr, "Error: Failed to build stiffness matrix\n");
+        free_mesh(mesh);
+        free_membrane_params(params);
+        return 1;
+    }
+    
+    printf("A: %d x %d, NNZ = %d (Sparsity: %.2f%%)\n", 
+           (int)A->n_rows, (int)A->n_cols, (int)A->nnz, 
+           100.0 * (1.0 - (double)A->nnz / (A->n_rows * A->n_cols)));
+    
+    printf("Building mass matrix B...\n");
+    SparseMatrixCSR* B = build_mass_matrix(mesh);
+    if (!B) {
+        fprintf(stderr, "Error: Failed to build mass matrix\n");
+        free_sparse_matrix(A);
+        free_mesh(mesh);
+        free_membrane_params(params);
+        return 1;
+    }
+    
+    printf("B: %d x %d, NNZ = %d (Diagonal matrix)\n", 
+           (int)B->n_rows, (int)B->n_cols, (int)B->nnz);
+    
+    // Sauvegarde des matrices pour analyse
+    save_matrix_csr(A, "data/matrix_A_pattern.csv");
+    save_matrix_csr(B, "data/matrix_B_pattern.csv");
+    plot_matrix_sparsity(A, "plots/matrix_sparsity.png");
+    
+    // ============ CONFIGURATION DU SOLVEUR ============
+    printf("\nConfiguring solver...\n");
+    SolverConfig* config = create_solver_config(n_eigenvalues);
+    if (!config) {
+        fprintf(stderr, "Error: Failed to create solver configuration\n");
+        free_sparse_matrix(A);
+        free_sparse_matrix(B);
+        free_mesh(mesh);
+        free_membrane_params(params);
+        return 1;
+    }
+    
+    // ============ RESOLUTION ============
+    printf("\n");
+    EigenResults* results = solve_eigenproblem(A, B, config);
+    
+    if (!results) {
+        fprintf(stderr, "Error: Eigenvalue solver failed\n");
+        free_solver_config(config);
+        free_sparse_matrix(A);
+        free_sparse_matrix(B);
+        free_mesh(mesh);
+        free_membrane_params(params);
+        return 1;
+    }
+    
+    // ============ RESULTATS ============
+    printf("\n=== FINAL RESULTS ===\n");
+    print_eigenvalues(results, n_eigenvalues);
+    
+    // ============ VISUALISATION ============
+    printf("\nGenerating visualizations...\n");
+    
+    // Créer les répertoires nécessaires
+    int ret2 = system("mkdir -p data"); (void)ret2;
+    int ret3 = system("mkdir -p plots"); (void)ret3;
+    int ret4 = system("mkdir -p scripts"); (void)ret4;
+    
+    // Sauvegarde des modes propres
+    int modes_to_save = (results->n_eigenvalues < 5) ? results->n_eigenvalues : 5;
+    for (int i = 0; i < modes_to_save; i++) {
+        char filename[256];
+        sprintf(filename, "data/mode_%02d.csv", i+1);
+        printf("Saving mode %d to %s\n", i+1, filename);
+        save_mode_to_csv(mesh, results->eigenvectors[i], i, filename);
+    }
+    
+    // Sauvegarder les valeurs propres
+    save_eigenresults(results, "data/eigenvalues.csv");
+    
+    // Générer les plots
+    generate_plots(mesh, results, "plots");
+    
+    // ============ NETTOYAGE ============
+    printf("\nCleaning up...\n");
+    free_sparse_matrix(A);
+    free_sparse_matrix(B);
+    free_mesh(mesh);
+    free_membrane_params(params);
+    free_solver_config(config);
+    free_eigen_results(results);
+    
+    clock_t total_end = clock();
+    double total_time = ((double)(total_end - total_start)) / CLOCKS_PER_SEC;
+    
+    printf("\n========================================\n");
+    printf("Total execution time: %.2f seconds\n", total_time);
+    printf("Results saved in 'data/' and 'plots/'\n");
+    printf("========================================\n");
+    
+    return 0;
+}

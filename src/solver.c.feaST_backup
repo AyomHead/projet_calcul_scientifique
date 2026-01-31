@@ -1,0 +1,154 @@
+#include "solver.h"
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <time.h>
+
+SolverConfig* create_solver_config(SolverType type, int n_eigenvalues) {
+    SolverConfig* config = (SolverConfig*)malloc(sizeof(SolverConfig));
+    if (!config) return NULL;
+    
+    config->type = type;
+    config->n_eigenvalues = n_eigenvalues;
+    config->eps = 1e-10;
+    config->max_iter = 1000;
+    config->emin = 0.0;
+    config->emax = 100.0;
+    config->subspace_size = 2 * n_eigenvalues;
+    config->mkl_threads = 4;
+    
+    return config;
+}
+
+void free_solver_config(SolverConfig* config) {
+    if (config) free(config);
+}
+
+EigenResults* solve_eigenproblem(SparseMatrixCSR* A, SparseMatrixCSR* B, 
+                                 SolverConfig* config) {
+    clock_t start = clock();
+    
+    EigenResults* results = (EigenResults*)malloc(sizeof(EigenResults));
+    if (!results) return NULL;
+    
+    results->n_eigenvalues = config->n_eigenvalues;
+    results->eigenvalues = (double*)mkl_malloc(config->n_eigenvalues * sizeof(double), 64);
+    results->residuals = (double*)mkl_malloc(config->n_eigenvalues * sizeof(double), 64);
+    
+    // Allocation pour les vecteurs propres
+    results->eigenvectors = (double**)malloc(config->n_eigenvalues * sizeof(double*));
+    for (int i = 0; i < config->n_eigenvalues; i++) {
+        results->eigenvectors[i] = (double*)mkl_malloc(A->n_rows * sizeof(double), 64);
+    }
+    
+    // Conversion des matrices CSR vers format MKL
+    sparse_matrix_t mkl_A = convert_to_mkl_sparse(A);
+    sparse_matrix_t mkl_B = convert_to_mkl_sparse(B);
+    
+    // Configuration FEAST
+    MKL_INT pm[128];
+    pm[0] = 0;  // Paramètres par défaut
+    pm[1] = config->eps;  // Tolérance
+    pm[2] = config->subspace_size;  // Taille sous-espace
+    pm[3] = config->max_iter;  // Itérations max
+    pm[4] = 0;  // Initialisation aléatoire
+    pm[5] = 0;  // Pas de sortie détaillée
+    pm[6] = 0;  // Stop criteria
+    
+    // Intervalle de recherche
+    
+    MKL_INT m0 = config->n_eigenvalues;  // Nombre attendu dans l'intervalle
+    MKL_INT m;  // Nombre trouvé
+    
+    // Tableau pour les valeurs propres
+    double* E = results->eigenvalues;
+    double* X = (double*)mkl_malloc(A->n_rows * config->subspace_size * sizeof(double), 64);
+    double* res = results->residuals;
+    
+    // Descripteur de matrice
+    struct matrix_descr descrA;
+    descrA.type = SPARSE_MATRIX_TYPE_SYMMETRIC;
+    descrA.mode = SPARSE_FILL_MODE_UPPER;
+    descrA.diag = SPARSE_DIAG_NON_UNIT;
+    
+    // Appel de FEAST
+    sparse_status_t status = mkl_sparse_d_ev(
+        "F",           // Which eigenvalues? 'F' for interval [emin, emax]
+        pm,            // Parameters
+        mkl_A,         // Matrix A
+        descrA,        // Matrix descriptor
+        m0,           // Number of eigenvalues to find
+        &m,           // Number of eigenvalues found
+        E,            // Eigenvalues
+        X,            // Eigenvectors
+        res           // Residuals
+    );
+    
+    if (status != SPARSE_STATUS_SUCCESS) {
+        printf("FEAST solver error: %d\n", status);
+    }
+    
+    results->n_eigenvalues = m;
+    results->iterations = pm[2];  // Nombre d'itérations effectuées
+    
+    // Copie des vecteurs propres dans la structure results
+    for (int i = 0; i < m; i++) {
+        memcpy(results->eigenvectors[i], &X[i * A->n_rows], A->n_rows * sizeof(double));
+    }
+    
+    // Tri des valeurs propres (FEAST ne garantit pas l'ordre)
+    for (int i = 0; i < m - 1; i++) {
+        for (int j = i + 1; j < m; j++) {
+            if (E[i] > E[j]) {
+                // Échange valeurs propres
+                double temp_eig = E[i];
+                E[i] = E[j];
+                E[j] = temp_eig;
+                
+                // Échange vecteurs propres
+                double* temp_vec = results->eigenvectors[i];
+                results->eigenvectors[i] = results->eigenvectors[j];
+                results->eigenvectors[j] = temp_vec;
+                
+                // Échange résidus
+                double temp_res = res[i];
+                res[i] = res[j];
+                res[j] = temp_res;
+            }
+        }
+    }
+    
+    // Nettoyage
+    mkl_sparse_destroy(mkl_A);
+    mkl_sparse_destroy(mkl_B);
+    mkl_free(X);
+    
+    clock_t end = clock();
+    results->computation_time = ((double)(end - start)) / CLOCKS_PER_SEC;
+    
+    return results;
+}
+
+void print_eigenvalues(EigenResults* results, int n_to_print) {
+    int n = (n_to_print < results->n_eigenvalues) ? n_to_print : results->n_eigenvalues;
+    
+    printf("Index    Eigenvalue    Residual\n");
+    printf("--------------------------------\n");
+    for (int i = 0; i < n; i++) {
+        printf("%3d    %12.6f    %.2e\n", 
+               i + 1, results->eigenvalues[i], results->residuals[i]);
+    }
+}
+
+void save_eigenresults(EigenResults* results, const char* filename) {
+    FILE* file = fopen(filename, "w");
+    if (!file) return;
+    
+    fprintf(file, "index,eigenvalue,residual\n");
+    for (int i = 0; i < results->n_eigenvalues; i++) {
+        fprintf(file, "%d,%.10e,%.10e\n", 
+                i + 1, results->eigenvalues[i], results->residuals[i]);
+    }
+    
+    fclose(file);
+}
