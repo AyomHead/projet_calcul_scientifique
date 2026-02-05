@@ -32,7 +32,7 @@ def plot_mode(data, mode_num):
     Y = y.reshape((n, n))
     Z = z.reshape((n, n))
     
-    surf = ax.plot_surface(X, Y, Z, cmap='viridis',
+    surf = ax.plot_surface(X, Y, Z, cmap='RdBu_r',
                            linewidth=0, antialiased=True)
     fig.colorbar(surf, ax=ax, shrink=0.5, aspect=5)
     ax.set_title(f'Membrane Mode {mode_num}')

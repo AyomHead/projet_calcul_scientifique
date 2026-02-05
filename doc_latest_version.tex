@@ -1,27 +1,55 @@
 \documentclass[12pt,a4paper]{article}
+
+% ---------------- Packages ----------------
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage[french]{babel}
 \usepackage{amsmath, amssymb, amsfonts}
+\usepackage{physics}
 \usepackage{geometry}
 \usepackage{graphicx}
 \usepackage{hyperref}
 \usepackage{caption}
-\usepackage{fancyhdr}
-\usepackage{algorithm}
-\usepackage{algorithmic}
-\usepackage{booktabs}
-\usepackage{multirow}
-\usepackage{siunitx}
 \usepackage{subcaption}
+\usepackage{booktabs}
+\usepackage{array}
 \usepackage{tikz}
+\usepackage{fancyhdr}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{float}
+\usepackage{multicol}
 
 \geometry{top=2cm,bottom=2cm,left=2cm,right=2cm}
 \pagestyle{fancy}
 \fancyhf{}
-\fancyhead[L]{\small BLAS/LAPACK en Calcul Scientifique}
+\fancyhead[L]{\small Vibrations de Membranes avec Intel MKL}
 \fancyhead[R]{\small \thepage}
 \renewcommand{\headrulewidth}{0.4pt}
+
+% Configuration des listings pour le code C
+\lstset{
+    language=C,
+    basicstyle=\footnotesize\ttfamily,
+    keywordstyle=\color{blue},
+    commentstyle=\color{gray},
+    stringstyle=\color{red},
+    numbers=left,
+    numberstyle=\tiny,
+    stepnumber=1,
+    numbersep=5pt,
+    backgroundcolor=\color{lightgray!10},
+    frame=single,
+    rulecolor=\color{black},
+    tabsize=2,
+    breaklines=true,
+    captionpos=b
+}
+
+% Définition de commandes personnalisées
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\mkl}{\textbf{Intel MKL}}
+\newcommand{\dsygv}{\texttt{dsygv}}
 
 \begin{document}
 
@@ -101,27 +129,22 @@
 % ============================================
 % SECTION 1: INTRODUCTION
 % ============================================
-\section{Introduction à Intel Math Kernel Library (MKL)}
+\section{Introduction}
+\label{sec:introduction}
 
-\subsection{Présentation générale}
+Les vibrations des membranes sont un phénomène physique fascinant que l'on rencontre dans de nombreux domaines : instruments de musique (tambours), capteurs mécaniques, systèmes d'isolation acoustique, et même en biologie (vibrations des membranes cellulaires). Comprendre ces vibrations permet non seulement de prédire le comportement des systèmes, mais aussi de les concevoir pour des applications spécifiques.
 
-Intel Math Kernel Library (MKL) est une bibliothèque mathématique optimisée pour les processeurs Intel. Elle fournit des implémentations haute performance des routines BLAS (Basic Linear Algebra Subprograms), LAPACK (Linear Algebra PACKage), ScaLAPACK, ainsi que des solveurs pour les équations différentielles, les transformées de Fourier et les problèmes d'optimisation. MKL est particulièrement adaptée aux calculs scientifiques intensifs grâce à son optimisation pour l'architecture x86-64 et son support du parallélisme multithread via OpenMP et TBB.
+Dans ce projet, nous étudions les vibrations d'une membrane rectangulaire, d'abord dans le cas simple d'une membrane uniforme (avec des propriétés constantes), puis dans le cas plus réaliste d'une membrane non uniforme. Pour la membrane uniforme, nous pouvons trouver une solution exacte grâce à des méthodes mathématiques classiques. Cependant, pour la membrane non uniforme, nous devons recourir à des méthodes numériques avancées.
 
-\subsection{Applications pratiques de BLAS et LAPACK dans la vie active}
+Intel Math Kernel Library (MKL) est une bibliothèque de calcul haute performance qui nous permet de résoudre efficacement ces problèmes complexes. En particulier, nous utilisons les routines BLAS (Basic Linear Algebra Subprograms) et LAPACK (Linear Algebra PACKage) pour résoudre des problèmes aux valeurs propres de grande taille.
 
-Les bibliothèques BLAS et LAPACK, via Intel MKL, sont omniprésentes dans de nombreux domaines professionnels et industriels :
-
-\subsubsection{Ingénierie et Simulation Numérique}
-Dans le domaine de l'ingénierie aéronautique, par exemple, les simulations de dynamique des fluides computationnelle (CFD) reposent massivement sur la résolution de systèmes linéaires de grande taille. Les équations de Navier-Stokes, discrétisées sur des maillages complexes de plusieurs millions de points, génèrent des matrices creuses dont la manipulation efficace nécessite des routines BLAS optimisées. La stabilité et la précision numérique offertes par LAPACK sont cruciales pour garantir la fiabilité des prédictions aérodynamiques.
-
-\subsubsection{Finance Quantitative}
-Le secteur financier utilise intensivement ces bibliothèques pour la modélisation des risques, l'optimisation de portefeuilles, et le pricing d'options exotiques. Les méthodes de Monte-Carlo, les algorithmes de réduction de dimensionnalité, et les calculs de corrélations entre actifs impliquent des opérations matricielles massives. La performance d'Intel MKL permet de réduire significativement les temps de calcul, un avantage compétitif décisif dans les marchés financiers où chaque milliseconde compte.
-
-\subsubsection{Recherche Scientifique}
-En physique des matériaux, la résolution de l'équation de Schrödinger pour des systèmes complexes nécessite le calcul de valeurs propres de matrices de très grande dimension. En imagerie médicale, la reconstruction tomographique repose sur des algorithmes de décomposition en valeurs singulières (SVD) fournis par LAPACK. Dans tous ces domaines, la robustesse numérique et la performance d'Intel MKL sont essentielles.
-
-\subsubsection{Intelligence Artificielle et Apprentissage Automatique}
-Les réseaux de neurones profonds impliquent des millions d'opérations matricielles lors de l'entraînement et de l'inférence. Bien que des bibliothèques spécialisées comme cuDNN existent pour les GPU, de nombreuses étapes de prétraitement et de post-traitement sur CPU utilisent intensivement BLAS et LAPACK. L'analyse en composantes principales (PCA), méthode fondamentale de réduction de dimensionnalité, repose directement sur le calcul de vecteurs propres via LAPACK.
+\subsection{Objectifs du projet}
+\begin{itemize}
+    \item Comprendre la physique des vibrations de membranes
+    \item Passer de la solution analytique (membrane uniforme) à la simulation numérique (membrane non uniforme)
+    \item Maîtriser l'utilisation d'Intel MKL pour résoudre des problèmes scientifiques complexes
+    \item Analyser et visualiser les résultats de manière accessible
+\end{itemize}
 
 \subsection{Installation et configuration}
 
@@ -161,6 +184,86 @@ icc -o mon_programme mon_programme.c -mkl
 % ============================================
 % SECTION 2: PROBLÈME PHYSIQUE
 % ============================================
+\section{Vibrations d'une membrane uniforme : solution analytique}
+\label{sec:membrane_uniforme}
+
+\subsection{Description physique}
+Considérons une membrane mince, homogène et uniformément tendue, fixée sur tout son bord. La membrane occupe un domaine rectangulaire :
+\[
+\Omega = (0,L_x) \times (0,L_y)
+\]
+Soit $u(x,y,t)$ le déplacement vertical d'un point $(x,y)$ de la membrane à l'instant $t$. La membrane est caractérisée par :
+\begin{itemize}
+    \item Une densité surfacique constante $\rho$ (masse par unité de surface)
+    \item Une tension constante $T$ (force par unité de longueur)
+\end{itemize}
+
+\subsection{Équation des ondes}
+L'équation fondamentale qui régit les petites vibrations de la membrane est l'équation des ondes bidimensionnelle :
+\begin{equation}
+\rho \frac{\partial^2 u}{\partial t^2} = T \Delta u
+\end{equation}
+où $\Delta$ est le laplacien : $\Delta u = \frac{\partial^2 u}{\partial x^2} + \frac{\partial^2 u}{\partial y^2}$.
+
+En divisant par $\rho$ et en définissant la vitesse des ondes $c = \sqrt{T/\rho}$, on obtient :
+\begin{equation}
+\frac{\partial^2 u}{\partial t^2} = c^2 \Delta u
+\label{eq:wave_eq}
+\end{equation}
+
+Les conditions aux limites de type Dirichlet (bord fixe) sont :
+\begin{equation}
+u(0,y,t) = u(L_x,y,t) = u(x,0,t) = u(x,L_y,t) = 0
+\end{equation}
+
+\subsection{Résolution par séparation des variables}
+Nous cherchons des solutions de la forme :
+\begin{equation}
+u(x,y,t) = X(x)Y(y)G(t)
+\end{equation}
+
+En substituant dans l'équation \eqref{eq:wave_eq} et en séparant les variables, nous obtenons trois équations différentielles ordinaires :
+
+\subsubsection{Équation temporelle}
+\begin{equation}
+G''(t) + c^2 \lambda G(t) = 0
+\end{equation}
+dont les solutions sont des oscillations sinusoïdales avec fréquence $\omega = c\sqrt{\lambda}$.
+
+\subsubsection{Équations spatiales}
+\begin{align}
+X''(x) + \lambda_x X(x) &= 0, \quad X(0) = X(L_x) = 0 \\
+Y''(y) + \lambda_y Y(y) &= 0, \quad Y(0) = Y(L_y) = 0
+\end{align}
+avec $\lambda = \lambda_x + \lambda_y$.
+
+\subsection{Solution complète}
+Les solutions des équations spatiales sont :
+\begin{align}
+X_n(x) &= \sin\left(\frac{n\pi x}{L_x}\right), \quad \lambda_x = \left(\frac{n\pi}{L_x}\right)^2 \\
+Y_m(y) &= \sin\left(\frac{m\pi y}{L_y}\right), \quad \lambda_y = \left(\frac{m\pi}{L_y}\right)^2
+\end{align}
+où $n, m = 1, 2, 3, \dots$
+
+Les modes propres de vibration sont donc :
+\begin{equation}
+\phi_{n,m}(x,y) = \sin\left(\frac{n\pi x}{L_x}\right) \sin\left(\frac{m\pi y}{L_y}\right)
+\end{equation}
+
+\subsection{Fréquences propres}
+Chaque mode $(n,m)$ vibre à une fréquence propre :
+\begin{equation}
+\omega_{n,m} = c\sqrt{\left(\frac{n\pi}{L_x}\right)^2 + \left(\frac{m\pi}{L_y}\right)^2}
+\end{equation}
+
+\subsection{Interprétation physique}
+\begin{itemize}
+    \item \textbf{Mode (1,1)} : Toute la membrane se déplace dans le même sens (fondamental)
+    \item \textbf{Mode (1,2)} : Une moitié se déplace vers le haut, l'autre vers le bas
+    \item \textbf{Mode (2,1)} : Même chose mais selon l'autre direction
+    \item \textbf{Mode (2,2)} : Quatre régions alternent haut/bas
+\end{itemize}
+
 \section{Problème physique : Vibrations d'une membrane non uniforme}
 
 \subsection{Contexte physique}
@@ -374,122 +477,137 @@ Bien que la matrice $A$ soit creuse (seulement 5 diagonales non nulles), nous av
 
 Pour des problèmes plus grands ($N > 100$), il serait nécessaire d'utiliser un solveur adapté aux matrices creuses comme FEAST pour des raisons de mémoire et de temps de calcul.
 
+\subsubsection{Exemple d'utilisation en C}
+\begin{lstlisting}[caption=Exemple d'utilisation de dsygv]
+#include <mkl.h>
+
+int main() {
+    int n = 100;           // Taille du probleme
+    int itype = 1;         // Type de probleme
+    char jobz = 'V';       // Calculer valeurs et vecteurs propres
+    char uplo = 'U';       // Stockage triangle superieur
+    
+    // Allocation memoire
+    double *A = (double*)mkl_malloc(n*n*sizeof(double), 64);
+    double *B = (double*)mkl_malloc(n*n*sizeof(double), 64);
+    double *w = (double*)mkl_malloc(n*sizeof(double), 64);
+    
+    // Initialisation des matrices A et B
+    // ... (code d'initialisation)
+    
+    // Calcul de la taille optimale du tableau de travail
+    int lwork = -1;
+    double work_query;
+    dsygv(&itype, &jobz, &uplo, &n, A, &n, B, &n, w, 
+          &work_query, &lwork, &info);
+    
+    lwork = (int)work_query;
+    double *work = (double*)mkl_malloc(lwork*sizeof(double), 64);
+    
+    // Resolution du probleme aux valeurs propres
+    dsygv(&itype, &jobz, &uplo, &n, A, &n, B, &n, w, 
+          work, &lwork, &info);
+    
+    // Verification de la reussite
+    if (info == 0) {
+        printf("Calcul reussi !\n");
+    } else {
+        printf("Erreur dans le calcul.\n");
+    }
+    
+    // Liberation memoire
+    mkl_free(A);
+    mkl_free(B);
+    mkl_free(w);
+    mkl_free(work);
+    
+    return 0;
+}
+\end{lstlisting}
+
+
 % ============================================
 % SECTION 5: APPLICATION ET RÉSULTATS
 % ============================================
-\section{Application au problème de la membrane : Résultats et analyse}
+\subsection{Analyse simple pour non-spécialistes}
+Imaginez que la membrane est comme la peau d'un tambour. Quand on la frappe, elle vibre à différentes fréquences (des sons plus ou moins aigus). Notre calcul nous donne ces fréquences :
 
-\subsection{Configuration du problème}
-
-Nous avons résolu le problème de la membrane non uniforme avec les paramètres suivants :
 \begin{itemize}
-\item Taille du maillage : $N = 50$ points par dimension
-\item Degrés de liberté totaux : $2500$
-\item Valeurs propres calculées : $10$ (les premières)
-\item Solveur utilisé : \texttt{dsygv} (dense)
-\item Nombre de threads MKL : $4$
+\item \textbf{Fréquence fondamentale (0.240 Hz)} : C'est la note la plus grave que produit la membrane. Toute la membrane bouge dans le même sens, comme une vague unique.
+\item \textbf{Fréquences suivantes} : Ce sont des notes plus aiguës où la membrane se divise en zones qui montent et descendent alternativement.
+\item \textbf{Presque jumelles (0.491 et 0.500 Hz)} : Ces deux fréquences sont très proches. Dans un tambour parfaitement symétrique, elles seraient identiques. Les petites irrégularités les séparent légèrement.
 \end{itemize}
-
-\subsection{Résultats numériques}
-
-\subsubsection{Valeurs propres et fréquences}
-
-Les 10 premières valeurs propres $\lambda_i$ et fréquences $f_i = \frac{\sqrt{\lambda_i}}{2\pi}$ obtenues sont :
-
-\begin{table}[h]
-\centering
-\begin{tabular}{|c|c|c|}
-\hline
-\textbf{Mode} & \textbf{Valeur propre $\lambda_i$} & \textbf{Fréquence $f_i$ (Hz)} \\
-\hline
-1 & 2.282654 & 0.240 \\
-2 & 9.519506 & 0.491 \\
-3 & 9.850442 & 0.500 \\
-4 & 18.373903 & 0.682 \\
-5 & 36.200651 & 0.958 \\
-6 & 40.813765 & 1.017 \\
-7 & 46.471895 & 1.085 \\
-8 & 50.030441 & 1.126 \\
-9 & 72.231516 & 1.353 \\
-10 & 82.583877 & 1.446 \\
-\hline
-\end{tabular}
-\caption{Les 10 premières valeurs propres et fréquences de la membrane}
-\label{tab:eigenvalues}
-\end{table}
-
-\subsubsection{Temps de calcul}
-
-Le solveur \texttt{dsygv} a résolu le problème en \textbf{8.877 secondes} avec 4 threads. La conversion des matrices creuses au format dense a pris un temps négligeable.
-
-\subsubsection{Convergence}
-
-Le solveur a convergé en une seule itération (comme attendu pour la méthode QR) avec des résidus nuls à la précision machine (\texttt{info = 0}).
-
-\subsection{Analyse physique des résultats}
-
-\subsubsection{Mode fondamental}
-
-Le mode fondamental à $0.240$ Hz correspond à la vibration la plus basse possible de la membrane. Cette fréquence est influencée par :
-\begin{itemize}
-\item La tension moyenne $p(x,y)$
-\item La masse moyenne $w(x,y)$
-\item La présence de l'obstacle central $q(x,y)$ qui augmente légèrement la fréquence
-\end{itemize}
-
-\subsubsection{Quasi-dégénérescence des modes 2 et 3}
-
-Les modes 2 et 3 ont des fréquences très proches ($0.491$ Hz et $0.500$ Hz). Cette quasi-dégénérescence s'explique par :
-\begin{enumerate}
-\item La géométrie carrée du domaine qui, dans le cas uniforme, donne des modes dégénérés
-\item La légère brisure de symétrie due aux coefficients non uniformes $p(x,y)$ et $w(x,y)$
-\item L'obstacle central qui affecte différemment les deux modes
-\end{enumerate}
-
-\subsubsection{Distribution spectrale}
-
-La croissance des valeurs propres suit approximativement la loi $\lambda_n \propto n$ (pour une membrane 2D), mais avec des modifications dues aux non-uniformités. L'écart entre valeurs propres successives augmente avec le numéro de mode, ce qui est typique des systèmes vibratoires.
-
-\subsection{Analyse de convergence numérique}
-
-Nous avons étudié la convergence des valeurs propres en fonction de la finesse du maillage :
-
-\begin{table}[h]
-\centering
-\begin{tabular}{|c|c|c|c|c|}
-\hline
-\textbf{N} & \textbf{DOF} & $\lambda_1$ & $f_1$ (Hz) & \textbf{Temps (s)} \\
-\hline
-20 & 400 & 2.438390 & 0.249 & 0.075 \\
-30 & 900 & 2.351600 & 0.244 & 0.591 \\
-40 & 1600 & 2.308456 & 0.242 & 2.462 \\
-50 & 2500 & 2.282654 & 0.240 & 8.877 \\
-\hline
-\end{tabular}
-\caption{Convergence de la première valeur propre avec la finesse du maillage}
-\label{tab:convergence}
-\end{table}
-
-\subsubsection{Ordre de convergence}
-
-L'erreur relative sur $\lambda_1$ entre $N=40$ et $N=50$ est d'environ $1.1\%$. La méthode des différences finies d'ordre 2 donne une convergence en $O(h^2)$, ce qui est confirmé par nos résultats.
-
-\subsubsection{Temps de calcul vs précision}
-
-Le temps de calcul augmente rapidement avec $N$ (complexité $O(N^6)$ pour la résolution dense), tandis que la précision gagne seulement en $O(N^{-2})$. Il existe donc un compromis optimal entre temps de calcul et précision.
 
 \subsection{Visualisation des modes propres}
+Les figures suivantes montrent comment la membrane se déforme pour les cinq premiers modes de vibration :
 
-Les cinq premiers modes propres ont été visualisés (voir figures en annexe). On observe :
-\begin{enumerate}
-\item \textbf{Mode 1} : Une bosse unique centrée, symétrique
-\item \textbf{Mode 2} : Un nœud horizontal au centre
-\item \textbf{Mode 3} : Un nœud vertical au centre
-\item \textbf{Mode 4} : Deux nœuds perpendiculaires
-\item \textbf{Mode 5} : Une structure plus complexe avec un anneau nodal
-\end{enumerate}
+\begin{figure}[H]
+\centering
+\begin{subfigure}{0.32\textwidth}
+\includegraphics[width=\textwidth]{mode_01.png}
+\caption{Mode 1 (0.242 Hz)}
+\label{fig:mode1}
+\end{subfigure}
+\begin{subfigure}{0.32\textwidth}
+\includegraphics[width=\textwidth]{mode_02.png}
+\caption{Mode 2 (0.494 Hz)}
+\label{fig:mode2}
+\end{subfigure}
+\begin{subfigure}{0.32\textwidth}
+\includegraphics[width=\textwidth]{mode_03.png}
+\caption{Mode 3 (0.502 Hz)}
+\label{fig:mode3}
+\end{subfigure}
 
-L'obstacle central $q(x,y)$ modifie localement l'amplitude des modes, particulièrement pour les modes pairs qui ont un nœud au centre.
+\vspace{0.5cm}
+\begin{subfigure}{0.32\textwidth}
+\includegraphics[width=\textwidth]{mode_04.png}
+\caption{Mode 4 (0.686 Hz)}
+\label{fig:mode4}
+\end{subfigure}
+\begin{subfigure}{0.32\textwidth}
+\includegraphics[width=\textwidth]{mode_05.png}
+\caption{Mode 5 (0.962 Hz)}
+\label{fig:mode5}
+\end{subfigure}
+\caption{Les cinq premiers modes de vibration de la membrane non uniforme}
+\label{fig:modes}
+\end{figure}
+
+\subsubsection{Explication des figures}
+\begin{itemize}
+    \item \textbf{Zones rouges} : Parties de la membrane présentant un déplacement positif, correspondant à un soulèvement local.
+    \item \textbf{Zones bleues} : Parties de la membrane présentant un déplacement négatif, correspondant à un abaissement local.
+    \item \textbf{Lignes blanches} : Zones nodales approximatives où le déplacement est nul ou très faible.
+    \item \textbf{Point central} : Obstacle situé au centre de la membrane, induisant une perturbation locale du champ de vibration.
+\end{itemize}
+
+\subsection{Impact des non-uniformités}
+Comparée à une membrane uniforme idéale, la membrane non uniforme étudiée présente les caractéristiques suivantes :
+\begin{itemize}
+    \item Les fréquences propres sont modifiées par la non-uniformité du matériau et la présence de l’obstacle central.
+    \item Les formes modales sont déformées, avec des variations spatiales plus marquées à proximité de l’obstacle.
+    \item L’obstacle central peut engendrer, pour certains modes, une zone de déplacement fortement atténué au centre de la membrane.
+    \item La répartition des zones nodales perd sa régularité et ne respecte plus les symétries classiques observées dans le cas uniforme.
+\end{itemize}
+
+\subsection{Applications pratiques}
+L’analyse des vibrations de membranes non uniformes trouve des applications dans plusieurs domaines :
+\begin{itemize}
+    \item \textbf{Facteurs d’instruments} : Compréhension de l’influence des irrégularités géométriques ou matérielles sur les caractéristiques acoustiques.
+    \item \textbf{Ingénierie des vibrations} : Conception et optimisation de membranes destinées à vibrer dans des plages de fréquences spécifiques.
+    \item \textbf{Contrôle non destructif} : Détection et localisation de défauts ou d’hétérogénéités par analyse modale et vibratoire.
+\end{itemize}
+
+
+\subsubsection{Exemple concret : un tambour}
+Si cette membrane était la peau d'un tambour :
+\begin{itemize}
+\item Le mode 1 donnerait la note fondamentale (le son principal)
+\item Les modes 2-5 donneraient les harmoniques (les sons qui enrichissent le timbre)
+\item Les irrégularités créeraient un timbre unique à l'instrument
+\item L'obstacle central pourrait être un dispositif d'ajustement de la tension
+\end{itemize}
 
 % ============================================
 % SECTION 6: PERFORMANCES ET OPTIMISATION
@@ -533,56 +651,6 @@ Pour des problèmes plus grands, nous recommandons :
 \item \textbf{Format CSR} : Stocker seulement les éléments non nuls
 \item \textbf{Solveur FEAST} : Extraire sélectivement les valeurs propres désirées
 \item \textbf{Solveur itératif} : Méthode de Lanczos ou Arnoldi pour les très grands problèmes
-\end{enumerate}
-
-% ============================================
-% SECTION 7: CONCLUSIONS ET ENSEIGNEMENTS
-% ============================================
-\section{Conclusions et enseignements}
-
-\subsection{Synthèse des résultats}
-
-Ce projet a démontré avec succès :
-\begin{enumerate}
-\item La modélisation physique d'une membrane non uniforme vibrante
-\item La discrétisation par différences finies d'un problème aux valeurs propres
-\item L'utilisation efficace d'Intel MKL pour la résolution numérique
-\item L'analyse physique des modes de vibration obtenus
-\item L'étude de convergence de la méthode numérique
-\end{enumerate}
-
-\subsection{Enseignements clés}
-
-\subsubsection{Sur Intel MKL}
-\begin{itemize}
-\item \textbf{Facilité d'utilisation} : Intégration simple dans un programme C/C++
-\item \textbf{Performances} : Accélération significative grâce au parallélisme
-\item \textbf{Robustesse} : Stabilité numérique éprouvée pour les problèmes de valeurs propres
-\item \textbf{Polyvalence} : Large gamme de solveurs adaptés à différents problèmes
-\end{itemize}
-
-\subsubsection{Sur le calcul scientifique}
-\begin{itemize}
-\item \textbf{Compromis précision/coût} : Un maillage plus fin améliore la précision mais augmente considérablement le coût computationnel
-\item \textbf{Importance du conditionnement} : Les matrices issues de problèmes physiques sont généralement bien conditionnées
-\item \textbf{Validation physique} : Les résultats numériques doivent toujours être interprétés physiquement
-\end{itemize}
-
-\subsubsection{Sur la méthode numérique}
-\begin{itemize}
-\item \textbf{Efficacité des différences finies} : Simple à implémenter et suffisamment précise pour de nombreux problèmes
-\item \textbf{Structure matricielle} : Exploiter la structure creuse est crucial pour les grands problèmes
-\item \textbf{Choix du solveur} : Adapter le solveur à la taille et à la structure du problème
-\end{itemize}
-
-\subsection{Perspectives et améliorations possibles}
-
-\begin{enumerate}
-\item \textbf{Extension 3D} : Appliquer la même méthodologie à des volumes vibrants
-\item \textbf{Maillages non structurés} : Utiliser la méthode des éléments finis pour des géométries complexes
-\item \textbf{Problèmes non linéaires} : Étudier les grandes déformations de la membrane
-\item \textbf{Couplages multiphysiques} : Interaction avec un fluide environnant
-\item \textbf{Optimisation de forme} : Trouver la forme de membrane optimale pour une fréquence donnée
 \end{enumerate}
 
 % ============================================

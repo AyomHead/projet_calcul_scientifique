@@ -80,7 +80,7 @@ void generate_python_script(const char* plot_type) {
         fprintf(script, "    Y = y.reshape((n, n))\n");
         fprintf(script, "    Z = z.reshape((n, n))\n");
         fprintf(script, "    \n");
-        fprintf(script, "    surf = ax.plot_surface(X, Y, Z, cmap='viridis',\n");
+        fprintf(script, "    surf = ax.plot_surface(X, Y, Z, cmap='RdBu_r',\n");
         fprintf(script, "                           linewidth=0, antialiased=True)\n");
         fprintf(script, "    fig.colorbar(surf, ax=ax, shrink=0.5, aspect=5)\n");
         fprintf(script, "    ax.set_title(f'Membrane Mode {mode_num}')\n");
