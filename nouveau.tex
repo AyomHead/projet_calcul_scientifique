@@ -1,0 +1,549 @@
+\documentclass[12pt]{beamer}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{amsmath, amssymb, physics}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tikz}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{multicol}
+\usepackage{adjustbox}
+\usepackage{ragged2e}
+
+% ============================================
+% CONFIGURATION DU THÈME
+% ============================================
+\usetheme{Madrid}
+\usecolortheme{seahorse}
+\setbeamertemplate{navigation symbols}{}
+
+% Couleurs personnalisées
+\definecolor{unstimblue}{RGB}{0, 70, 140}
+\definecolor{unstimorange}{RGB}{255, 102, 0}
+\definecolor{unstimgreen}{RGB}{0, 128, 0}
+
+\setbeamercolor{structure}{fg=unstimblue}
+\setbeamercolor{title}{fg=white, bg=unstimblue}
+\setbeamercolor{frametitle}{fg=white, bg=unstimblue!80}
+\setbeamercolor{block title}{fg=white, bg=unstimorange}
+\setbeamercolor{block body}{bg=unstimblue!5}
+\setbeamercolor{alerted text}{fg=unstimorange}
+
+% En-tête et pied de page
+\setbeamertemplate{headline}{}
+\setbeamertemplate{footline}{
+    \hfill
+    \scriptsize
+    \color{gray}
+    \insertframenumber/\inserttotalframenumber
+    \hspace{0.3cm}
+    \vspace{0.2cm}
+}
+
+% ============================================
+% CONFIGURATION DES LISTINGS
+% ============================================
+\lstset{
+    language=C,
+    basicstyle=\tiny\ttfamily,
+    keywordstyle=\color{unstimblue},
+    commentstyle=\color{gray},
+    stringstyle=\color{unstimorange},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    backgroundcolor=\color{gray!5},
+    frame=single,
+    rulecolor=\color{gray!30},
+    tabsize=2,
+    breaklines=true,
+    captionpos=b,
+    showstringspaces=false,
+}
+
+% ============================================
+% COMMANDES PERSONNALISÉES
+% ============================================
+\newcommand{\mkl}{\textbf{Intel MKL}}
+\newcommand{\dsygv}{\texttt{dsygv}}
+\newcommand{\code}[1]{\texttt{\color{unstimblue}#1}}
+\newcommand{\highlight}[1]{\textcolor{unstimorange}{\textbf{#1}}}
+
+% ============================================
+% PAGE DE TITRE
+% ============================================
+\title{Utilisation d'Intel MKL en Calcul Scientifique}
+\subtitle{Application aux Vibrations de Membranes Non Uniformes}
+\author{
+    AHOTONHOUN Aimé Césaire \\
+    BONOU Justus \\
+    HANDJEMEDJI Ezéchiel
+}
+\institute{
+    ENSGMM-ABOMEY \\
+    Université Nationale des Sciences Technologies, Ingénierie et Mathématiques \\(UNSTIM)\\
+    \textbf{Sous la supervision de : Dr. Carlos AGOSSOU}
+}
+\date{Année Académique 2025-2026}
+\logo{\includegraphics[height=1.3cm]{pictures/ensgmm.png}}
+
+\begin{document}
+
+% ============================================
+% PAGE DE TITRE
+% ============================================
+\begin{frame}
+    \titlepage
+    \begin{tikzpicture}[remember picture, overlay]
+        \draw[unstimorange, line width=1.5pt] 
+            ([xshift=0.05cm, yshift=-0.05cm]current page.north west) 
+            rectangle 
+            ([xshift=-0.05cm, yshift=0.05cm]current page.south east);
+    \end{tikzpicture}
+\end{frame}
+
+% ============================================
+% TABLE DES MATIÈRES
+% ============================================
+\begin{frame}{Plan de la Présentation}
+    \tableofcontents
+\end{frame}
+
+% ============================================
+% SECTION 1: INTRODUCTION
+% ============================================
+\section{Introduction}
+\begin{frame}{Contexte du Projet}
+    \begin{columns}[T]
+        \begin{column}{0.7\textwidth}
+            \begin{block}{Les vibrations de membranes}
+                \footnotesize
+                Phénomène physique omniprésent dans:
+                \begin{itemize}
+                    \item Instruments de musique
+                    \item Capteurs mécaniques
+                    \item Isolation vibratoire
+                    \item Biologie cellulaire
+                \end{itemize}
+            \end{block}
+            
+            \begin{block}{Objectifs principaux}
+                \footnotesize
+                \begin{enumerate}
+                    \item Comprendre la physique des vibrations
+                    \item Simulation numérique avancée
+                    \item Maîtriser \mkl{}
+                    \item Analyser et visualiser
+                \end{enumerate}
+            \end{block}
+        \end{column}
+        
+        \begin{column}{0.30\textwidth}
+            \begin{center}
+                \vspace{2cm}
+                \begin{tikzpicture}
+                \draw[fill=unstimblue!20] (0,0) rectangle (3,0.8);
+                \node at (1.5,0.4) {\textbf{BLAS}};
+                \draw[fill=unstimorange!20] (0,1) rectangle (3,1.8);
+                \node at (1.5,1.4) {\textbf{LAPACK}};
+                \draw[fill=unstimgreen!20] (0,2) rectangle (3,2.8);
+                \node at (1.5,2.4) {\textbf{Parallélisme}};
+            \end{tikzpicture}
+            \end{center}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+% ============================================
+% SECTION 2: PROBLÈME PHYSIQUE
+% ============================================
+\section{Problème Physique}
+\begin{frame}{Membrane Uniforme: Solution Analytique}
+    \begin{columns}[T]
+        \begin{column}{0.48\textwidth}
+            \begin{block}{Équation des ondes}
+                \small
+                \[
+                \frac{\partial^2 u}{\partial t^2} = c^2 \Delta u
+                \text{ avec }c = \sqrt{T/\rho}\]
+            \end{block}
+
+            \begin{block}{Conditions aux limites}
+                \small
+                \[
+                u(0, y, t) = u(Lx , y, t) = 0\]
+                \[ u(x, 0, t) = u(x, Ly , t) = 0
+                \]
+            \end{block}
+            
+            \begin{block}{Solution par séparation}
+                \small
+                \[
+                u(x,y,t) = X(x)Y(y)G(t)
+                \]
+            \end{block}
+        \end{column}
+        
+        \begin{column}{0.48\textwidth}
+            \begin{block}{Modes propres de vibrations}
+                \small
+                \[
+                \phi_{n,m}(x,y) = \sin\left(\frac{n\pi x}{L_x}\right) \sin\left(\frac{m\pi y}{L_y}\right)
+                \]
+            \end{block}
+            
+            \begin{block}{Fréquences propres}
+                \small
+                \[
+                \omega_{n,m} = c\sqrt{\left(\frac{n\pi}{L_x}\right)^2 + \left(\frac{m\pi}{L_y}\right)^2}
+                \]
+            \end{block}
+        \end{column}
+    \end{columns}
+\end{frame}
+\begin{frame}{Interprétation physique}
+    \begin{exampleblock}{Exemples de modes}
+                \tiny
+                \begin{itemize}
+                    \item Mode (1,1): Toute la membrane dans le même sens
+                    \item Mode (1,2): Une moitié monte, l'autre descend
+                    \item Mode (2,1) : Même chose mais selon l’autre direction
+                    \item Mode (2,2) : Quatre régions alternent haut/bas
+                \end{itemize}
+            \end{exampleblock}
+\end{frame}
+
+\begin{frame}{Membrane Non Uniforme: Modèle Réaliste}
+    \begin{block}{Équation générale}
+        \small
+        \[
+        -\nabla \cdot \big(p(x,y) \nabla u(x,y)\big) + q(x,y)u(x,y) = \lambda w(x,y)u(x,y)
+        \]
+    \end{block}
+    
+    \begin{columns}[T]
+        \begin{column}{0.4\textwidth}
+            \begin{block}{Conditions aux limites}
+            \[u(x, y) = 0 \text{ sur } \partial\Omega \]
+            \end{block}
+        \end{column}
+        
+        \begin{column}{0.5\textwidth}
+            \begin{block}{Coefficients variables}
+                \footnotesize
+                \begin{align*}
+                    p(x,y) &= 1 + 0.5\sin(2\pi x)\cos(2\pi y) \\
+                    w(x,y) &= 1 + 0.3xy \\
+                    q(x,y) &= 50e^{-50[(x-0.5)^2+(y-0.5)^2]}
+                \end{align*}
+            \end{block}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+% ============================================
+% SECTION 3: DISCRÉTISATION
+% ============================================
+\section{Discrétisation Numérique}
+\begin{frame}{Méthode des Différences Finies}
+    \begin{block}{Maillage uniforme}
+                \small
+                \[
+                h = \frac{1}{N+1}, \quad x_i = ih, \quad y_j = jh
+                \]
+            \end{block}
+            \textbf{Discrétisation du Laplacien}
+                \footnotesize
+                \[
+\nabla \cdot (p \nabla u) \approx \frac{1}{h^2} \left[ p_{i+\frac{1}{2},j} (u_{i+1,j} - u_{i,j}) - p_{i-\frac{1}{2},j} (u_{i,j} - u_{i-1,j}) \right]\]
+\[+ \frac{1}{h^2} \left[ p_{i,j+\frac{1}{2}} (u_{i,j+1} - u_{i,j}) - p_{i,j-\frac{1}{2}} (u_{i,j} - u_{i,j-1}) \right]
+\]\\
+\textbf{Discrétisation complète}
+    \footnotesize
+                \begin{multline*}
+-\frac{1}{h^2}\left[ p_{i+\frac{1}{2},j} (u_{i+1,j} - u_{i,j}) - p_{i-\frac{1}{2},j} (u_{i,j} - u_{i-1,j}) \right] \\
+-\frac{1}{h^2}\left[ p_{i,j+\frac{1}{2}} (u_{i,j+1} - u_{i,j}) - p_{i,j-\frac{1}{2}} (u_{i,j} - u_{i,j-1}) \right]
++ q_{i,j} u_{i,j} = \lambda w_{i,j} u_{i,j}
+\end{multline*}
+\end{frame}
+\begin{frame}{Discrétisation}
+    \begin{block}{Problème discrétisé}
+                \small
+                \[
+                A\mathbf{u} = \lambda B\mathbf{u}
+                \]
+                \begin{itemize}
+                    \item $A$: Matrice de rigidité (creuse)
+                    \item $B$: Matrice de masse (diagonale)
+                    \item $\lambda = \omega^2$: Valeurs propres
+                    \item $u$: Vecteur des déplacements aux nœuds
+                \end{itemize}
+            \end{block}
+\end{frame}
+
+% ============================================
+% SECTION 4: IMPLÉMENTATION MKL
+% ============================================
+\section{Implémentation avec Intel MKL}
+\begin{frame}{Solveurs de Valeurs Propres dans MKL}
+    \begin{table}
+        \centering
+        \scriptsize
+        \begin{tabular}{|l|l|l|}
+        \hline
+        \textbf{Solveur} & \textbf{Type,Problème} & \textbf{Application} \\
+        \hline
+        \texttt{dsyev} & Dense, standard & Petites matrices \\
+        \texttt{dsygv} & Dense, généralisé & Notre choix \\
+        \texttt{FEAST} & Creux, sélectif & Grands systèmes \\
+        \texttt{PARDISO+} & Creux, standard & Problèmes standards \\
+        \hline
+        \end{tabular}
+        \caption{Solveurs disponibles dans Intel MKL}
+    \end{table}
+    
+    \begin{block}{Pourquoi \dsygv{}?}
+        \footnotesize
+        \begin{columns}[T]
+            \begin{column}{0.5\textwidth}
+                \begin{itemize}
+                    \item Matrices symétriques réelles
+                    \item Problème généralisé
+                    \item Stabilité numérique
+                \end{itemize}
+            \end{column}
+            \begin{column}{0.5\textwidth}
+                \begin{itemize}
+                    \item Tous les modes calculés
+                    \item Simple à implémenter
+                    \item Bon pour taille modérée
+                \end{itemize}
+            \end{column}
+        \end{columns}
+    \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Code: Utilisation de \texttt{dsygv}}
+\scriptsize
+\begin{lstlisting}[basicstyle=\scriptsize\ttfamily]
+#include <mkl.h>
+
+int main() {
+    int n = 2500;      // 50x50 points
+    int itype = 1;     // A*x = lambda*B*x
+    char jobz = 'V';   // Valeurs et vecteurs propres
+    char uplo = 'U';   // Stockage triangle supérieur
+    double *A = (double*)mkl_malloc(n*n*sizeof(double), 64);
+    double *B = (double*)mkl_malloc(n*n*sizeof(double), 64);
+    double *w = (double*)mkl_malloc(n*sizeof(double), 64);
+    int lwork = -1;
+    double work_query;
+    dsygv(&itype, &jobz, &uplo, &n, A, &n, B, &n, 
+          w, &work_query, &lwork, &info);
+    lwork = (int)work_query;
+    double *work = (double*)mkl_malloc(lwork*sizeof(double), 64);
+    dsygv(&itype, &jobz, &uplo, &n, A, &n, B, &n, 
+          w, work, &lwork, &info);
+          
+    mkl_free(A); mkl_free(B); mkl_free(w); mkl_free(work);
+    return 0;
+}
+\end{lstlisting}
+\end{frame}
+
+% ============================================
+% SECTION 5: RÉSULTATS
+% ============================================
+\section{Résultats et Visualisation}
+\begin{frame}{Visualisation des Modes Propres}
+    \begin{figure}
+        \begin{subfigure}{0.33\textwidth}
+            \centering
+            \includegraphics[width=\textwidth]{mode_01.png}
+            \caption*{Mode 1}
+        \end{subfigure}
+        \begin{subfigure}{0.33\textwidth}
+            \centering
+            \includegraphics[width=\textwidth]{mode_02.png}
+            \caption*{Mode 2}
+        \end{subfigure}
+        \begin{subfigure}{0.33\textwidth}
+            \centering
+            \includegraphics[width=\textwidth]{mode_03.png}
+            \caption*{Mode 3}
+        \end{subfigure}
+        \end{figure}
+        \end{frame}
+        \begin{frame}{}
+        \begin{figure}
+        \begin{subfigure}{0.4\textwidth}
+            \centering
+            \includegraphics[width=\textwidth]{mode_04.png}
+            \caption*{Mode 4}
+        \end{subfigure}
+        \begin{subfigure}{0.4\textwidth}
+            \centering
+            \includegraphics[width=\textwidth]{mode_05.png}
+            \caption*{Mode 5}
+        \end{subfigure}
+        \caption{Les cinq premiers modes de vibration de la membrane non uniforme}
+    \end{figure}
+\end{frame}
+
+% ============================================
+% SECTION 6: PERFORMANCES
+% ============================================
+\section{Performances et Optimisation}
+\begin{frame}{Analyse des Performances}
+    \begin{columns}[T]
+        \begin{column}{0.45\textwidth}
+            \begin{block}{Résultats pour N=50}
+                \footnotesize
+                \begin{itemize}
+                    \item \highlight{Taille}: $2500 \times 2500$
+                    \item \highlight{Mémoire}: $\sim 50$ Mo
+                    \item \highlight{Temps}: 8.877 s
+                    \item \highlight{Threads}: 4
+                    \item \highlight{Précision}: Double
+                \end{itemize}
+            \end{block}
+            \end{column}
+            \begin{column}{0.45\textwidth}
+            \begin{alertblock}{Limitations}
+                \footnotesize
+                \begin{itemize}
+                    \item Stockage dense d'une matrice creuse
+                    \item 99.8\% de zéros stockés
+                    \item Non scalable pour N $>$ 100
+                \end{itemize}
+            \end{alertblock}
+        \end{column}
+\end{columns}
+\begin{block}{Pour les grands systèmes}
+                \footnotesize
+                \begin{enumerate}
+                    \item Format CSR : Stocker seulement les éléments non nuls
+\item Solveur FEAST : Extraire sélectivement les valeurs propres désirées
+\item Solveur itératif : Méthode de Lanczos ou Arnoldi pour les très grands
+                \end{enumerate}
+            \end{block}
+\end{frame}
+% ============================================
+% CONCLUSION
+% ============================================
+\section{Conclusion}
+\begin{frame}{Récapitulatif}
+    \begin{columns}[T]
+        \begin{column}{0.5\textwidth}
+            \begin{block}{Accomplissements}
+                \footnotesize
+                \begin{itemize}
+                    \item Modélisation physique complète
+                    \item Discrétisation par différences finies
+                    \item Implémentation avec \mkl{}
+                    \item Résolution numérique efficace
+                    \item Visualisation des résultats
+                \end{itemize}
+            \end{block}
+            \vspace{0.5cm}
+            \begin{center}
+            \begin{tikzpicture}[scale=0.7]
+                    \node[draw, fill=unstimblue!20, rounded corners, minimum width=2.5cm, minimum height=0.7cm, font=\tiny] 
+                        at (0,0) {\textbf{Physique}};
+                    \vspace{0.1cm}
+                    \node[draw, fill=unstimorange!20, rounded corners, minimum width=2.5cm, minimum height=0.7cm, font=\tiny] 
+                        at (0,-0.9) {\textbf{Mathématiques}};
+                    \vspace{0.1cm}
+                    \node[draw, fill=unstimgreen!20, rounded corners, minimum width=2.5cm, minimum height=0.7cm, font=\tiny] 
+                        at (0,-1.8) {\textbf{Informatique}};
+                \end{tikzpicture}    
+            \end{center}
+        \end{column}
+        
+        \begin{column}{0.4\textwidth}
+            \begin{center}
+            \begin{block}{Compétences développées}
+                \footnotesize
+                \begin{itemize}
+                    \item Calcul scientifique haute performance
+                    \item Utilisation de BLAS/LAPACK
+                    \item Analyse numérique
+                    \item Visualisation scientifique
+                \end{itemize}
+            \end{block}
+            \end{center}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{Dépôt GitHub et Références}
+    \centering
+    \LARGE
+    \textbf{Code Source Complet}
+    
+    \vspace{0.5cm}
+    
+    \normalsize
+    \href{https://github.com/AyomHead/projet_calcul_scientifique}
+    {\color{unstimblue}\underline{\texttt{github.com/AyomHead/projet\_calcul\_scientifique}}}
+    
+    \vspace{0.8cm}
+    
+    \begin{columns}[T]
+        \begin{column}{0.48\textwidth}
+            \begin{block}{Contenu}
+                \footnotesize
+                \begin{itemize}
+                    \item Code C avec MKL
+                    \item Scripts Python
+                    \item Données numériques
+                    \item Visualisations
+                    \item Document LaTeX
+                \end{itemize}
+            \end{block}
+        \end{column}
+        
+        \begin{column}{0.5\textwidth}
+            \begin{block}{Références}
+                \footnotesize
+                \begin{itemize}
+                    \item Intel MKL Documentation
+                    \item LAPACK User's Guide
+                    \item Numerical Linear Algebra
+                    \item Finite Element Procedures
+                \end{itemize}
+            \end{block}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+% ============================================
+% FIN DE PRÉSENTATION
+% ============================================
+\begin{frame}
+    \centering
+    \Huge
+    \color{unstimblue}
+    \textbf{MERCI POUR VOTRE ATTENTION}
+    
+    \vspace{0.8cm}
+    
+    \Large
+    \textbf{Vos questions ou approches sont les bienvenues.}
+    
+    \vspace{1cm}
+    
+    \normalsize
+    \color{black}
+    \begin{tabular}{cc}
+        \includegraphics[height=3cm]{pictures/ensgmm.png} &
+        \includegraphics[height=3cm]{pictures/logo.png}
+    \end{tabular}
+\end{frame}
+
+\end{document}
